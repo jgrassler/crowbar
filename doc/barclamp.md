@@ -432,8 +432,8 @@ section I will assume you used the
 and link to it when we discuss the changes you need to make.
 
 First of all, replace all occurrences of `barbican` by `mybarclamp` and adjust
-the `description field`. Your default data bag's first few lines should now
-look something like this:
+the top-level `description field`. Your default data bag's first few lines
+should now look something like this:
 
 ```
 {
@@ -442,6 +442,131 @@ look something like this:
   "attributes": {
       "mybarclamp" : {
 ```
+
+The corresponding section of the Barbican default data bag begins
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L1) and ends
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L29).
+
+With these preliminaries out of the way you can now add all the parameters you
+need under `attributes["mybarclamp"]` and remove existing parameters left over
+from the default data bag you copied. You should leave the following fields in
+place, since the Crowbar UI will automatically populate them for barclamps in
+`crowbar-openstack` and/or because some chef side helper functions will use
+them:
+
+* `db`
+* `database_instance`
+* `keystone_instance`
+* `rabbitmq_instance`
+* `user`
+* `group`
+* `service_password`
+* `service_user`
+
+When you are done `attributes["mybarclamp"]` should look something like this:
+
+```
+     "mybarclamp" : {
+        "api" : {
+           "bind_host" : "*",
+           "bind_port" : 12345,
+           "logfile" : "/var/log/myservice/myservice-api.log",
+        },
+        "backend" : {
+            db_plugin = "postgres",
+            enable_foo = true,
+            foobar_threshhold = 255
+        },
+        "db" : {
+           "database" : "myservice",
+           "password" : "",
+           "user" : "myservice"
+        },
+        "debug" : false,
+        "group" : "mybarclamp",
+        "user" : "mybarclamp",
+        "database_instance": "none",
+        "keystone_instance": "none",
+        "rabbitmq_instance": "none",
+        "service_password": "none",
+        "service_user": "myservice"
+     }
+```
+
+The corresponding section of the Barbican default data bag begins
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L5) and ends
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L29).
+
+Once you have added your parameters you will need to adjust
+`deployment["mybarclamp"]`. This section provides meta data about your chef
+cookbook to the Crowbar web UI. The following fields need to be changed in
+there:
+
+* `schema-revision`: This field contains the data bag's schema revision. For a
+   new barclamp it starts with the `crowbar-core` `master` branch's current
+   base revision (at the time of this writing this was `100` but it increases
+   with every new stable Crowbar release. Please ask a Crowbar developer about
+   the current value). Whenever the data bag is changed, this revision is
+   incremented by `1` and a corresponding migration is added to the
+   `chef/data_bags/crowbar/migrate/mybarclamp/` directory. Since you are
+   writing a new barclamp, set this to  the current `master` branch's base
+   revision.
+
+* `element_states`: this field contains a mapping from your chef roles to a
+  list of valid states for each role. Typically these states are `readying`,
+  `ready` and `applying` for every role, so just use these values for every
+  role's list.
+
+* `element_order`: this field is a list of single-element lists and defines the
+  order in which your barclamp's roles should be applied. Each single-element
+  list contains a role name. Whichever role occurs first in this list must have
+  been applied successfully to all nodes it is assigned to before the roles
+  further down are applied to their respective nodes. In other words, this
+  controls global execution order of your roles across all nodes orchestrated
+  by Crowbar. All of your roles should be mentioned here.
+
+* `element_run_list_order`: this field governs the priority of your roles in
+  relation to the other roles assigned to any given node your own role is
+  assigned to. In other words, this governs local execution order of all roles
+  (i.e. not just yours) assigned to a given node. All of your roles should be
+  assigned a priority here.
+
+When you are done `deployment["mybarclamp"]` should look something like this
+(this example assumes you have defined a `mybarclamp-compute` and a
+`mybarclamp-controller` role):
+
+```
+  "deployment": {
+    "mybarclamp" : {
+      "crowbar-revision": 0,
+      "crowbar-applied": false,
+      "schema-revision": 100,
+      "element_states": {
+        "mybarclamp-controller": [ "readying", "ready", "applying" ],
+        "mybarclamp-compute": [ "readying", "ready", "applying" ]
+      },
+      "elements": {},
+      "element_order": [
+        [ "mybarclamp-controller" ],
+        [ "mybarclamp-compute" ]
+      ],
+      "element_run_list_order": {
+        "mybarclamp-controller": 120,
+        "mybarclamp-compute": 120
+      },
+      "config": {
+        "environment": "mybarclamp-base-config",
+        "mode": "full",
+        "transitions": false,
+        "transition_list": []
+      }
+    }
+  }
+```
+
+The corresponding section of the Barbican default data bag begins
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L31) and ends
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L53).
 
 ##### Data bag schema
 
