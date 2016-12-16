@@ -4,6 +4,12 @@ This document is an introduction to Barclamp development. It will guide you
 through all the steps neccessary to create a minimal (without UI elements)
 Barclamp for Crowbar.
 
+## Terms and definitions
+
+We will assume throughout this text that your barclamp is will be named
+mybarclamp. Please substitute your actual barclamp's name for this placeholder
+when you create a barclamp.
+
 ## Prerequisites
 
 We will assume some things to already be present. Namely, the following:
@@ -31,13 +37,22 @@ fork the appropriate Barclamp collection. The machines can be provided through
 manual installation or by using an automated setup tool such as
 [mkcloud](https://github.com/SUSE-Cloud/automation/blob/master/scripts/mkcloud).
 
-Optionally (but strongly recommended) you can also create a backup of your
-Crowbar admin node. You are probably going to break it a few times in the
-course of testing your new barclamp so it is a good idea to have a backup you
-can quickly restore rather than rebuild your entire test environment. If you
-are using `mkcloud` you can create and restore a LVM snapshot of your admin
-node using its `createadminsnapshot` and `restoreadminfromsnapshot` steps,
-respectively.
+Optionally (but strongly recommended) you can also
+
+* Create a backup of your Crowbar admin node: You are probably going to break
+  it a few times in the course of testing your new barclamp so it is a good
+  idea to have a backup you can quickly restore rather than rebuild your entire
+  test environment. If you are using `mkcloud` you can create and restore a LVM
+  snapshot of your admin node using its `createadminsnapshot` and
+  `restoreadminfromsnapshot` steps, respectively.
+
+* Create an additional OpenStack controller or compute node as a scratch node:
+  this will allow you to deploy only your own barclamp's controller side
+  components to this node while all other OpenStack services reside on the main
+  controller. This greatly shortens the time a chef run for your barclamp's
+  controller side components takes and thus speeds up development. Make a
+  backup of this node as well to guard against breakage and allow for
+  clean-slate deployment of your barclamp's controller side components.
 
 ## Development Environment
 
@@ -135,13 +150,27 @@ new barclamps, but it is better to get used to the `patch(1)` based workflow
 right away since these problems do become a problem when changing an existing
 barclamp later and thus the `patch(1)` based workflow becomes neccessary.
 
-### Development Workflow
+## Barclamp Component Overview
+
+A barclamp consists of two main components:
+
+* A [chef cookbook](https://docs.chef.io/cookbooks.html) which takes care of
+  actually deploying your service.
+* Some glue code to tie your chef cookbook into the Crowbar Web UI. This glue
+  code will parametrize your chef cookbook and apply its component roles to the
+  nodes it orchestrates.
+
+The subsequent sections will describe these two components and the ingredients
+that go into them into detail. They start of with an overview of a barclamp's
+development phases as we know them from experience and take you through all
+aspects of barclamp implementation in the order you are likely to encounter
+them. They are meant to be read in parallel to developing your own barclamp.
+
+## Development Phases
 
 In this section we will show a development workflow we consider useful. This is
 not the end-all-be-all of Barclamp development workflows, but it should be
 useful for new developers.
-
-## Development Phases
 
 The Development workflow essentially consists of 3 phases: 
 
@@ -184,29 +213,77 @@ You should also create recipes and configuration templates in your cookbook
 already, but you only need to flesh these out as far as you need them to be
 clear about the parameters you'll need Crowbar to supply.
 
+Throughout this phase you can work on your local machine or on your development
+Crowbar admin node, as you prefer, since the testing you can do in this phase is
+limited to basic ruby syntax checks using `ruby -c`. Once you are finished with
+this phase development will have to move to your Crowbar admin node, though.
+
 #### Chef Cookbook
 
-Location: `chef/cookbooks/<your_barclamp_name>`
+Location: `chef/cookbooks/mybarclamp`
 
 The best point to start barclamp development is the
-[chef cookbook](https://docs.chef.io/cookbooks.html). Each barclamp contains
+chef cookbook. Each barclamp contains
 one of these. The chef cookbook is your barclamp's core component. It contains
 the code that will do the grunt work of deploying the services, configuration
-files and runtime state handled by your barclamp. 
+files and runtime state handled by your barclamp. As a first step, create
+`chef/cookbooks/mybarclamp` now.
+
+#### Cookbook metadata
+
+Locations:
+
+* `chef/cookbooks/mybarclamp/metadata.rb`
+* `chef/cookbooks/mybarclamp/README.md`
+
+Before we begin with the cookbook proper we will need to take care of some
+boilerplate files. The first of these is `metadata.rb`. It mostly contains
+various descriptive information about your barclamps. Here's an example from
+the Barbican barclamp (`chef/cookbooks/barbican/metadata.rb`):
+
+```
+name "barbican"
+maintainer "Crowbar project"
+maintainer_email "crowbar@googlegroups.com"
+license "Apache 2.0"
+description "Installs/Configures Barbican"
+long_description IO.read(File.join(File.dirname(__FILE__), "README.md"))
+version "0.1"
+
+depends "apache2"
+depends "database"
+depends "keystone"
+depends "crowbar-openstack"
+depends "crowbar-pacemaker"
+depends "utils"
+```
+
+The contents of these fields are mostly free-form, hence you can copy the file
+from another barclamp and simply adapt the `name` and `description` fields. The
+one exception to that rule are the `depends` statements: these define which
+other barclamps your own barclamp depends on because it uses their cookbooks'
+contents. If, for instance, you use the Keystone barclamp's
+`KeystoneHelper.keystone_settings()` method (which you should for OpenStack
+barclamps), you'd add a `depends "keystone"` statement here.
+
+You may already have noticed the second piece of boilerplate: the README.md
+file referenced by the `long_description` statement. This goes one goes into
+`chef/cookbooks/mybarclamp` and describes your Chef cookbook as
+verbosely or tersely as you like (please put at least one complete sentence in
+there).
 
 #### Recipes
 
-Location: `chef/cookbooks/<your_barclamp_name>/recipes`
+Location: `chef/cookbooks/mybarclamp/recipes/*.rb`
 
-A chef cookbook consists of
-[https://docs.chef.io/recipes.html](https://docs.chef.io/recipes.html). These
-recipes are written in Ruby (hence they must have a `.rb` extension) and are
-the smallest organization unit of a chef cookbook. They consist of
-[resource](https://docs.chef.io/resource.html) definitions that define various
-aspects of system state, such as a configuration file's content, packages to
-install, or a service to enable and start. In this step the recipes do not need
-to contain any code, yet. You primarily need to know which recipes to define
-and what each recipe's purpose is at this stage.
+[Recipes](https://docs.chef.io/recipes.html) make up the bulk of your chef
+cookbook's payload. These recipes are written in Ruby (hence they must have a
+`.rb` extension) and are the smallest organization unit of a chef cookbook.
+They consist of [resource](https://docs.chef.io/resource.html) definitions that
+define various aspects of system state, such as a configuration file's content,
+packages to install, or a service to enable and start. In this step the recipes
+do not need to contain any code, yet. You primarily need to know which recipes
+to define and what each recipe's purpose is at this stage.
 
 You are free to organize your recipes as you see fit. There are no
 hard-and-fast rules for this since they mostly depend on the application your
@@ -229,8 +306,8 @@ application's architecture perfectly.
 
 Locations:
 
-* Role recipes: `chef/cookbooks/<your_barclamp_name>/recipes`
-* Role definitions: `chef/roles`
+* Role recipes: `chef/cookbooks/mybarclamp/recipes`
+* Role definitions: `chef/roles/role_mybarclamp_*.rb`
 
 Once you've got a set of chef recipes, you'll need to organize them into roles.
 A role aggregates one or more chef recipes and deploys all of its component
@@ -243,11 +320,16 @@ Roles are defined in two places. First, you create a _role recipe_ in the
 for role recipes is as follows:
 
 ```
-role_<barclamp name>_<role description>
+role_<barclamp name>_<role description>.rb
 ```
 
 `<role description>` may contain letters, numbers and underscore (`_`)
-characters.
+characters. Assuming you've got two separate role recipes, one for the compute
+nodes and one for OpenStack controller nodes, you might end up with something
+like this:
+
+* `chef/cookbooks/mybarclamp/role_mybarclamp_compute.rb`
+* `chef/cookbooks/mybarclamp/role_mybarclamp_controller.rb`
 
 This role recipe contains one or more `include_recipe` statements to pull in
 component recipes and a validity check that asks the Crowbar application
@@ -290,7 +372,7 @@ default_attributes
 override_attributes
 ```
 
-Most of this is boilerplate with two notable exceptions:
+Most of this is boilerplate, with two notable exceptions:
 
 1. `name` defines the role's canonical name as described above
 2. `run_list` contains a reference to the role's underlying role recipe.
@@ -299,6 +381,71 @@ Create role definitions for all of your roles now and proceed to the next
 section.
 
 #### Data Bag
+
+Locations:
+
+* Data bag schema: `chef/data_bags/crowbar/template-mybarclamp.schema`
+* Default data bag: `chef/data_bags/crowbar/template-mybarclamp.json`
+* Migrations: `chef/data_bags/crowbar/migrate/mybarclamp/*.rb`
+
+Now that you have your recipes and roles defined you should also know what
+configuration settings are static (e.g. best practice settings you want to
+hardwire as enabled or disabled) and what needs to go into your chef cookbooks
+as parameters that can vary for each local setup (e.g. user names and passwords
+or the OpenStack identity URL). Everything you want to be configurable will
+need to go into the `data bag`.
+
+For a newly created Barclamp the data bag consists of a _data bag schema_
+(`chef/data_bags/crowbar/template-mybarclamp.schema`) and a
+_default data bag_ (`chef/data_bags/crowbar/template-<your barclamp's
+name>.json`). Both are in JSON format. The _data bag schema_ describes how your
+data bag is structured and imposes constraints such as data type and
+permissible values on individual fields (much like an XML schema). The _default
+data bag_ contains default settings for these parameters where defaults can
+reasonably be provided. There are some special cases such as user names and
+passwords that are initially left blank and will be filled in by the Crowbar
+web UI when the barclamp is activated, so feel free to leave fields blank if
+you plan on adding code to the Crowbar web UI to populate them or make use of
+existing web UI.
+
+When fields are added to or removed from an existing data bag's data bag, you
+will need to add another component to the data bag: a _migration_. This is
+essentially a database migration for the Crowbar web UI since data bags map
+directly to a table in the Crowbar web UI's database. To keep that database
+in sync with the data bag you will need to provide migrations to update that
+database table if you make changes to an existing barclamp's data bag.
+
+In the following sections we will explain the data bag's components in detail.
+We will start with the default data bag rather than the data bag schema because
+it is easier to fill that with content first, and then produce a schema to match.
+
+##### Default Data Bag
+
+* Location: `chef/data_bags/crowbar/template-mybarclamp.json`
+
+First of all, copy an existing default data bag to
+`chef/data_bags/crowbar/template-mybarclamp.json`. You will modify
+this data bag to contain your own barclamp's parameters. This is easier and far
+less error prone than writing a default data bag from scratch. Throughout this
+section I will assume you used the
+[Barbican barclamp's default data bag](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json)
+and link to it when we discuss the changes you need to make.
+
+First of all, replace all occurrences of `barbican` by `mybarclamp` and adjust
+the `description field`. Your default data bag's first few lines should now
+look something like this:
+
+```
+{
+  "id": "template-mybarclamp",
+  "description": "The Foobar as a Service Component of OpenStack",
+  "attributes": {
+      "mybarclamp" : {
+```
+
+##### Data bag schema
+
+##### Schema Migration
 
 #### Crowbar Application Components
 
@@ -317,5 +464,3 @@ section.
 #### Mkcloud Gating
 
 #### Reviewer approval
-
-#### 
