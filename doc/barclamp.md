@@ -31,6 +31,14 @@ fork the appropriate Barclamp collection. The machines can be provided through
 manual installation or by using an automated setup tool such as
 [mkcloud](https://github.com/SUSE-Cloud/automation/blob/master/scripts/mkcloud).
 
+Optionally (but strongly recommended) you can also create a backup of your
+Crowbar admin node. You are probably going to break it a few times in the
+course of testing your new barclamp so it is a good idea to have a backup you
+can quickly restore rather than rebuild your entire test environment. If you
+are using `mkcloud` you can create and restore a LVM snapshot of your admin
+node using its `createadminsnapshot` and `restoreadminfromsnapshot` steps,
+respectively.
+
 ## Development Environment
 
 Most of your development will take place on your Crowbar node (log in as root).
@@ -161,13 +169,136 @@ The Development workflow essentially consists of 3 phases:
 
 Below we will describe these phases in detail.
 
+_Note: unless otherwise indicated, all paths from here on out are relative to
+your_ `crowbar-openstack` _fork's root directory._
+
 ### Basic implementation
 
-#### Data Bag
+In this phase you will do a scaffold implementation of your barclamp. This
+means that you will mostly focus on the Crowbar UI side of things and how it
+ties into your barclamp's chef cookbook. This means that on the chef side
+you'll only implement the structure of your chef cookbook, i.e. define the
+parameters it takes and the roles it defines for the Crowbar UI to use.
+
+You should also create recipes and configuration templates in your cookbook
+already, but you only need to flesh these out as far as you need them to be
+clear about the parameters you'll need Crowbar to supply.
+
+#### Chef Cookbook
+
+Location: `chef/cookbooks/<your_barclamp_name>`
+
+The best point to start barclamp development is the
+[chef cookbook](https://docs.chef.io/cookbooks.html). Each barclamp contains
+one of these. The chef cookbook is your barclamp's core component. It contains
+the code that will do the grunt work of deploying the services, configuration
+files and runtime state handled by your barclamp. 
+
+#### Recipes
+
+Location: `chef/cookbooks/<your_barclamp_name>/recipes`
+
+A chef cookbook consists of
+[https://docs.chef.io/recipes.html](https://docs.chef.io/recipes.html). These
+recipes are written in Ruby (hence they must have a `.rb` extension) and are
+the smallest organization unit of a chef cookbook. They consist of
+[resource](https://docs.chef.io/resource.html) definitions that define various
+aspects of system state, such as a configuration file's content, packages to
+install, or a service to enable and start. In this step the recipes do not need
+to contain any code, yet. You primarily need to know which recipes to define
+and what each recipe's purpose is at this stage.
+
+You are free to organize your recipes as you see fit. There are no
+hard-and-fast rules for this since they mostly depend on the application your
+barclamp deploys:
+
+For instance, if your application (like most OpenStack components) consists of
+an API service and a RabbitMQ driven backend service, you might want to split
+these into a `api.rb` and `backend.rb` service. Likewise, if you need an
+agent to run on compute nodes, this might warrant a dedicated `agent.rb`
+recipe. If you want to use Crowbar's high availability features, it might also
+make sense to have a dedicated `ha.rb` recipe for users deploying it in a
+highly available manner.
+
+On a more general note, feel free to take a look at the other cookbooks'
+recipes in `chef/cookbooks/` for inspiration. We have barclamps for a range of
+OpenStack services already and one of these might just match your own
+application's architecture perfectly.
 
 #### Roles
 
-#### Chef Cookbook
+Locations:
+
+* Role recipes: `chef/cookbooks/<your_barclamp_name>/recipes`
+* Role definitions: `chef/roles`
+
+Once you've got a set of chef recipes, you'll need to organize them into roles.
+A role aggregates one or more chef recipes and deploys all of its component
+chef recipes. Crowbar can assign roles to one or more nodes (subject to
+constraints defined in the Crowbar application). In the HA case it can assign
+roles to one or more clusters of roles.
+
+Roles are defined in two places. First, you create a _role recipe_ in the
+`chef/cookbooks/<your_barclamp_name>/recipes` directory. Our naming convention
+for role recipes is as follows:
+
+```
+role_<barclamp name>_<role description>
+```
+
+`<role description>` may contain letters, numbers and underscore (`_`)
+characters.
+
+This role recipe contains one or more `include_recipe` statements to pull in
+component recipes and a validity check that asks the Crowbar application
+whether the role is valid for the current node. Here's an example from the
+Barbican barclamp (`cookbooks/barbican/recipes/role_barbican_controller.rb`):
+
+```
+if CrowbarRoleRecipe.node_state_valid_for_role?(node, "barbican", "barbican-controller")
+  include_recipe "barbican::api"
+  include_recipe "barbican::common"
+  include_recipe "barbican::worker"
+  include_recipe "barbican::keystone-listener"
+  include_recipe "barbican::ha"
+end
+```
+
+Note how the recipes are qualified with the cookbook name ("barbican") in this
+case and omit the `.rb` extension from their actual file name.
+
+Once all role recipes are created, you can create the corresponding role
+definitions in the `chef/roles` directory. Role definitions are snippets of
+ruby code and must have a `.rb` definitions. Our naming convention for role
+definitions is as follows:
+
+```
+<barclamp name>-<role description>
+```
+
+where `<role description>` is the role description from the role recipe with
+underscores (`_`) substituted by dashes (`-`). This will be the role's
+canonical name from this point onward.
+
+A role definition looks as follows (example from `roles/barbican-controller.rb`):
+
+```
+name "barbican-controller"
+description "Barbican Controller Role"
+run_list("recipe[barbican::role_barbican_controller]")
+default_attributes
+override_attributes
+```
+
+Most of this is boilerplate with two notable exceptions:
+
+1. `name` defines the role's canonical name as described above
+2. `run_list` contains a reference to the role's underlying role recipe.
+
+Create role definitions for all of your roles now and proceed to the next
+section.
+
+#### Data Bag
 
 #### Crowbar Application Components
 
