@@ -570,6 +570,131 @@ The corresponding section of the Barbican default data bag begins
 
 ##### Data bag schema
 
+* Location: `chef/data_bags/crowbar/template-mybarclamp.schema`
+
+With your default data bag finished you can now use the attributes and their
+data types from the default data bag as a guide for definining its schema. The
+schema holds constraints for every attribute in the default data bag, plus
+for optional attributes that may not be set in the default data bag but can
+nonetheless be added by the user.
+
+This schema translates directly to the database schema for the table where the
+Crowbar web UI will store the Barclamp's parameters. Hence it is revisioned
+(the revision is stored in `deployment["mybarclamp"]["schema-revision"]`
+`template-mybarclamp.schema`). Every revision later than the initial one comes
+with a migration in the `chef/data_bags/crowbar/migrate/mybarclamp/` directory
+(more on that in the next chapter).
+
+The schema contains a hierarchy of dictionaries that mirror the data structure
+in `template-mybarclamp.json`. The keys in this hierarchy are the attribute
+names from `template-mybarclamp.json` and the values are dictionaries of
+constraints for the attribute in question. Such a dictionary of constraints can
+have the following fields (these are only the most common ones):
+
+* `required`: a boolean value indicating whether this attribute must be present
+  (`true`) or not (`false`).
+
+* `type`: the attribute's data type. Valid values are `str`, `bool`, `int`,
+  `map` (key/value pairs) and `sequence` (lists of values).
+
+* `pattern` [only for attributes of type `str`]: a regular expression the attribute
+  must match.
+
+* `mapping` and `sequence` [only for attributes of type `map` and `sequence`,
+  respectively]: these contain lists or dictionaries that can be used to impose
+  constraints on a list or dictionary value's contents. This is mainly used to
+  cover the whole tree of nested data dictionaries in the data bag, but it can
+  also be used to impose restrictions on an individual list or dictionary
+  attribute at the lowest level.
+
+Armed with this knowledge we can now create a schema that matches the default
+data bag from the previous section. Similar to the previous section we will
+start out with a copy of the Barbican barclamp's schema
+(`template-barbican.schema`), which we'll copy to `template-mybarclamp.json`.
+
+Again we will first globally search and replace `barbican` by `mybarclamp` and
+then go through it section by section, starting with the top-level fields. The
+only thing that needs adjusting at the top level is the pattern constraint for
+the `id` field, which our global search and replace will already have taken
+care of, leaving us with a top-level section that should look something like this:
+
+```
+{
+  "required": true,
+  "type": "map",
+  "mapping": {
+    "id": { "type": "str", "required": true, "pattern": "/^mybarclamp-|^template-mybarclamp$/" },
+    "description": { "required": true, "type": "str" },
+    "attributes": {
+      "required": true,
+      "type": "map",
+      "mapping": {
+        "mybarclamp": {
+```
+
+The corresponding section from the Barbican data bag schema begins
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L1) and ends
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L11).
+
+Next, we will need to adjust the constraints for `attributes["mybarclamp"]`.
+This one is a bit more interesting since we removed a bunch of attributes and
+added some of our own. After our changes this section should look something
+like this (note the optional `log_level` attribute we smuggled in there):
+
+```
+        "mybarclamp": {
+          "required": true,
+          "type": "map",
+          "mapping": {
+            "api": {
+              "required": true,
+              "type": "map",
+              "mapping": {
+                  "bind_host": { "required": true, "type": "str" },
+                  "bind_port": { "required": true, "type": "int" },
+                  "logfile": { "required": true, "type": "str" },
+                }
+              },
+            "backend": {
+              "required": true,
+              "type": "map",
+              "mapping": {
+                  "db_plugin": { "required": true, "type": "str" },
+                  "enable_foo": { "required": true, "type": "bool" },
+                  "foobar_threshhold": { "required": true, "type": "int" }
+                  "log_level": { required: false, "type": "string" }
+              }
+            "db": {
+              "required": true,
+              "type": "map",
+              "mapping": {
+                  "database": { "required": true, "type": "str" },
+                  "password": { "required": true, "type": "str" },
+                  "user": { "required": true, "type": "str" }
+              }
+            },
+            "debug": { "type": "bool" },
+            "group": { "required": true, "type": "str" },
+            "user": { "required": true, "type": "str" }
+            "database_instance": { "type": "str", "required": true },
+            "keystone_instance": { "type": "str", "required": true },
+            "rabbitmq_instance": { "type": "str", "required": true },
+            "enable_keystone_listener": { "required": true, "type": "bool" },
+            "service_user": { "type": "str", "required": true },
+            "service_password": { "type": "str", "required": true },
+           }
+         }
+       }
+```
+
+The corresponding section from the Barbican data bag schema begins
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L11) and ends
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L48).
+
+Unlike in the previous section we will not change anything for the `deployment`
+section, since the attributes in this section, and consequently their schema as
+well, are uniform across all barclamps.
+
 ##### Schema Migration
 
 #### Crowbar Application Components
