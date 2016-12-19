@@ -7,8 +7,9 @@ Barclamp for Crowbar.
 ## Terms and definitions
 
 We will assume throughout this text that your barclamp is will be named
-mybarclamp. Please substitute your actual barclamp's name for this placeholder
-when you create a barclamp.
+`mybarclamp`. Please substitute your actual barclamp's name for this
+placeholder when you create a barclamp. The convention for OpenStack barclamps
+is to use the OpenStack component's name, e.g. `nova`.
 
 ## Prerequisites
 
@@ -116,7 +117,7 @@ sync_crowbar()
   barclamp_install.rb /opt/dell/crowbar_framework/barclamps/ &&
   for barclamp in $BARCLAMPS
     do
-    knife cookbook upload -o /opt/dell/chef/cookbooks/ monasca
+    knife cookbook upload -o /opt/dell/chef/cookbooks/ mybarclamp
     done
   systemctl restart crowbar
   }
@@ -220,21 +221,21 @@ this phase development will have to move to your Crowbar admin node, though.
 
 #### Chef Cookbook
 
-Location: `chef/cookbooks/mybarclamp`
+Location: `chef/cookbooks/`
 
 The best point to start barclamp development is the
 chef cookbook. Each barclamp contains
 one of these. The chef cookbook is your barclamp's core component. It contains
 the code that will do the grunt work of deploying the services, configuration
 files and runtime state handled by your barclamp. As a first step, create
-`chef/cookbooks/mybarclamp` now.
+`chef/cookbooks/` now.
 
 #### Cookbook metadata
 
 Locations:
 
-* `chef/cookbooks/mybarclamp/metadata.rb`
-* `chef/cookbooks/mybarclamp/README.md`
+* `chef/cookbooks//metadata.rb`
+* `chef/cookbooks//README.md`
 
 Before we begin with the cookbook proper we will need to take care of some
 boilerplate files. The first of these is `metadata.rb`. It mostly contains
@@ -268,13 +269,13 @@ barclamps), you'd add a `depends "keystone"` statement here.
 
 You may already have noticed the second piece of boilerplate: the README.md
 file referenced by the `long_description` statement. This goes one goes into
-`chef/cookbooks/mybarclamp` and describes your Chef cookbook as
+`chef/cookbooks/` and describes your Chef cookbook as
 verbosely or tersely as you like (please put at least one complete sentence in
 there).
 
 #### Recipes
 
-Location: `chef/cookbooks/mybarclamp/recipes/*.rb`
+Location: `chef/cookbooks//recipes/*.rb`
 
 [Recipes](https://docs.chef.io/recipes.html) make up the bulk of your chef
 cookbook's payload. These recipes are written in Ruby (hence they must have a
@@ -306,8 +307,8 @@ application's architecture perfectly.
 
 Locations:
 
-* Role recipes: `chef/cookbooks/mybarclamp/recipes`
-* Role definitions: `chef/roles/role_mybarclamp_*.rb`
+* Role recipes: `chef/cookbooks//recipes`
+* Role definitions: `chef/roles/role__*.rb`
 
 Once you've got a set of chef recipes, you'll need to organize them into roles.
 A role aggregates one or more chef recipes and deploys all of its component
@@ -328,8 +329,8 @@ characters. Assuming you've got two separate role recipes, one for the compute
 nodes and one for OpenStack controller nodes, you might end up with something
 like this:
 
-* `chef/cookbooks/mybarclamp/role_mybarclamp_compute.rb`
-* `chef/cookbooks/mybarclamp/role_mybarclamp_controller.rb`
+* `chef/cookbooks//role_mybarclamp_compute.rb`
+* `chef/cookbooks//role_mybarclamp_controller.rb`
 
 This role recipe contains one or more `include_recipe` statements to pull in
 component recipes and a validity check that asks the Crowbar application
@@ -384,9 +385,9 @@ section.
 
 Locations:
 
-* Data bag schema: `chef/data_bags/crowbar/template-mybarclamp.schema`
-* Default data bag: `chef/data_bags/crowbar/template-mybarclamp.json`
-* Migrations: `chef/data_bags/crowbar/migrate/mybarclamp/*.rb`
+* Data bag schema: `chef/data_bags/crowbar/template-.schema`
+* Default data bag: `chef/data_bags/crowbar/template-.json`
+* Migrations: `chef/data_bags/crowbar/migrate//*.rb`
 
 Now that you have your recipes and roles defined you should also know what
 configuration settings are static (e.g. best practice settings you want to
@@ -396,7 +397,7 @@ or the OpenStack identity URL). Everything you want to be configurable will
 need to go into the `data bag`.
 
 For a newly created Barclamp the data bag consists of a _data bag schema_
-(`chef/data_bags/crowbar/template-mybarclamp.schema`) and a
+(`chef/data_bags/crowbar/template-.schema`) and a
 _default data bag_ (`chef/data_bags/crowbar/template-<your barclamp's
 name>.json`). Both are in JSON format. The _data bag schema_ describes how your
 data bag is structured and imposes constraints such as data type and
@@ -425,26 +426,26 @@ it is easier to fill that with content first, and then produce a schema to match
 
 ##### Default Data Bag
 
-* Location: `chef/data_bags/crowbar/template-mybarclamp.json`
+* Location: `chef/data_bags/crowbar/template-.json`
 
 First of all, copy an existing default data bag to
-`chef/data_bags/crowbar/template-mybarclamp.json`. You will modify
+`chef/data_bags/crowbar/template-.json`. You will modify
 this data bag to contain your own barclamp's parameters. This is easier and far
 less error prone than writing a default data bag from scratch. Throughout this
 section I will assume you used the
 [Barbican barclamp's default data bag](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json)
 and link to it when we discuss the changes you need to make.
 
-First of all, replace all occurrences of `barbican` by `mybarclamp` and adjust
+First of all, replace all occurrences of `barbican` by `` and adjust
 the top-level `description field`. Your default data bag's first few lines
 should now look something like this:
 
 ```
 {
-  "id": "template-mybarclamp",
+  "id": "template-",
   "description": "The Foobar as a Service Component of OpenStack",
   "attributes": {
-      "mybarclamp" : {
+      "" : {
 ```
 
 The corresponding section of the Barbican default data bag begins
@@ -452,7 +453,7 @@ The corresponding section of the Barbican default data bag begins
 [here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L29).
 
 With these preliminaries out of the way you can now add all the parameters you
-need under `attributes["mybarclamp"]` and remove existing parameters left over
+need under `attributes[""]` and remove existing parameters left over
 from the default data bag you copied. You should leave the following fields in
 place, since the Crowbar UI will automatically populate them for barclamps in
 `crowbar-openstack` and/or because some chef side helper functions will use
@@ -467,10 +468,10 @@ them:
 * `service_password`
 * `service_user`
 
-When you are done `attributes["mybarclamp"]` should look something like this:
+When you are done `attributes[""]` should look something like this:
 
 ```
-     "mybarclamp" : {
+     "" : {
         "api" : {
            "bind_host" : "*",
            "bind_port" : 12345,
@@ -487,8 +488,8 @@ When you are done `attributes["mybarclamp"]` should look something like this:
            "user" : "myservice"
         },
         "debug" : false,
-        "group" : "mybarclamp",
-        "user" : "mybarclamp",
+        "group" : "",
+        "user" : "",
         "database_instance": "none",
         "keystone_instance": "none",
         "rabbitmq_instance": "none",
@@ -502,7 +503,7 @@ The corresponding section of the Barbican default data bag begins
 [here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L29).
 
 Once you have added your parameters you will need to adjust
-`deployment["mybarclamp"]`. This section provides meta data about your chef
+`deployment[""]`. This section provides meta data about your chef
 cookbook to the Crowbar web UI. The following fields need to be changed in
 there:
 
@@ -512,7 +513,7 @@ there:
    with every new stable Crowbar release. Please ask a Crowbar developer about
    the current value). Whenever the data bag is changed, this revision is
    incremented by `1` and a corresponding migration is added to the
-   `chef/data_bags/crowbar/migrate/mybarclamp/` directory. Since you are
+   `chef/data_bags/crowbar/migrate//` directory. Since you are
    writing a new barclamp, set this to  the current `master` branch's base
    revision.
 
@@ -535,13 +536,13 @@ there:
   (i.e. not just yours) assigned to a given node. All of your roles should be
   assigned a priority here.
 
-When you are done `deployment["mybarclamp"]` should look something like this
+When you are done `deployment[""]` should look something like this
 (this example assumes you have defined a `mybarclamp-compute` and a
-`mybarclamp-controller` role):
+`-controller` role):
 
 ```
   "deployment": {
-    "mybarclamp" : {
+    "" : {
       "crowbar-revision": 0,
       "crowbar-applied": false,
       "schema-revision": 100,
@@ -556,7 +557,7 @@ When you are done `deployment["mybarclamp"]` should look something like this
       ],
       "element_run_list_order": {
         "mybarclamp-controller": 120,
-        "mybarclamp-compute": 120
+        mybarclamp"-compute": 120
       },
       "config": {
         "environment": "mybarclamp-base-config",
@@ -574,7 +575,7 @@ The corresponding section of the Barbican default data bag begins
 
 ##### Data bag schema
 
-* Location: `chef/data_bags/crowbar/template-mybarclamp.schema`
+* Location: `chef/data_bags/crowbar/template-.schema`
 
 With your default data bag finished you can now use the attributes and their
 data types from the default data bag as a guide for definining its schema. The
@@ -583,8 +584,8 @@ for optional attributes that may not be set in the default data bag but can
 nonetheless be added by the user.
 
 The schema contains a hierarchy of dictionaries that mirror the data structure
-in `template-mybarclamp.json`. The keys in this hierarchy are the attribute
-names from `template-mybarclamp.json` and the values are dictionaries of
+in `template-.json`. The keys in this hierarchy are the attribute
+names from `template-.json` and the values are dictionaries of
 constraints for the attribute in question. Such a dictionary of constraints can
 have the following fields (these are only the most common ones):
 
@@ -607,9 +608,9 @@ have the following fields (these are only the most common ones):
 Armed with this knowledge we can now create a schema that matches the default
 data bag from the previous section. Similar to the previous section we will
 start out with a copy of the Barbican barclamp's schema
-(`template-barbican.schema`), which we'll copy to `template-mybarclamp.json`.
+(`template-barbican.schema`), which we'll copy to `template-.json`.
 
-Again we will first globally search and replace `barbican` by `mybarclamp` and
+Again we will first globally search and replace `barbican` by `` and
 then go through it section by section, starting with the top-level fields. The
 only thing that needs adjusting at the top level is the pattern constraint for
 the `id` field, which our global search and replace will already have taken
@@ -620,139 +621,289 @@ care of, leaving us with a top-level section that should look something like thi
   "required": true,
   "type": "map",
   "mapping": {
-    "id": { "type": "str", "required": true, "pattern": "/^mybarclamp-|^template-mybarclamp$/" },
+    "id": { "type": "str", "required": true, "pattern": "/^-|^template-mybarclamp$/" },
     "description": { "required": true, "type": "str" },
     "attributes": {
       "required": true,
       "type": "map",
       "mapping": {
-        "mybarclamp": {
+        "": {
 ```
 
 The corresponding section from the Barbican data bag schema begins
 [here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L1) and ends
 [here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L11).
 
-Next, we will need to adjust the constraints for `attributes["mybarclamp"]`.
-This one is a bit more interesting since we removed a bunch of attributes and
-added some of our own. After our changes this section should look something
-like this (note the optional `log_level` attribute we smuggled in there):
+Next, we will need to adjust the constraints for `attributes[""]`. The Crowbar
+web UI is a Ruby on Rails application with a MVC (Model-View-Controller)
+architecture so you will need to create the MVC architecture's three
+components for your barclamp plus some glue and metadata. This section will
+take you through all of these steps.
+
+##### Barclamp Metadata
+
+Location: `mybarclamp.yml`
+
+Much like the chef cookbook, the Crowbar application needs some metadata about
+your barclamp. This is a YAML formatted file residing in the top level
+directory. It's filename consists of your barclamp's name plus the extension
+`.yml`. Below you will find a commented example:
 
 ```
-        "mybarclamp": {
-          "required": true,
-          "type": "map",
-          "mapping": {
-            "api": {
-              "required": true,
-              "type": "map",
-              "mapping": {
-                  "bind_host": { "required": true, "type": "str" },
-                  "bind_port": { "required": true, "type": "int" },
-                  "logfile": { "required": true, "type": "str" },
-                }
-              },
-            "backend": {
-              "required": true,
-              "type": "map",
-              "mapping": {
-                  "db_plugin": { "required": true, "type": "str" },
-                  "enable_foo": { "required": true, "type": "bool" },
-                  "foobar_threshhold": { "required": true, "type": "int" }
-                  "log_level": { required: false, "type": "string" }
-              }
-            "db": {
-              "required": true,
-              "type": "map",
-              "mapping": {
-                  "database": { "required": true, "type": "str" },
-                  "password": { "required": true, "type": "str" },
-                  "user": { "required": true, "type": "str" }
-              }
-            },
-            "debug": { "type": "bool" },
-            "group": { "required": true, "type": "str" },
-            "user": { "required": true, "type": "str" }
-            "database_instance": { "type": "str", "required": true },
-            "keystone_instance": { "type": "str", "required": true },
-            "rabbitmq_instance": { "type": "str", "required": true },
-            "enable_keystone_listener": { "required": true, "type": "bool" },
-            "service_user": { "type": "str", "required": true },
-            "service_password": { "type": "str", "required": true },
-           }
-         }
-       }
+barclamp:
+  # Your barclamp's name as it appears in file names.
+  name: 'mybarclamp'
+  # Your barclamp's name as it will be displayed in the Crowbar web UI.
+  display: 'Mybarclamp'
+  # Here we usually have the service name and a short description of the
+  # Service the barclamp deploys for OpenStack barclamps.
+  description: 'OpenStack Myservice: Provides Foo and Bar'
+  # Just leave this as it is.
+  version: 0
+  # This is a repeat of the requirements list from the chef cookbook.
+  requires:
+    - '@crowbar'
+    - 'database'
+    - 'rabbitmq'
+    - 'keystone'
+  # This denotes the Barclamp collection this barclamp belongs to.
+  member:
+    - 'openstack'
+
+crowbar:
+  # The barclamp's priority in the crowbar UI (lower number means higher priority)
+  run_order: 98
+  # The barclamp's priority in the ordering of chef cookbooks (lower number
+  # means higher priority)
+  chef_order: 98
+
+  # FIXME: The following appear to be unused. They are neither loaded in
+  # catalog() in barclamp_mgmt_lib.rb, nor do they have a corresponding method
+  # in the BarclampCatalog class). You might be able to omit them.
+  order: 98
+  proposal_schema_version: 3
+  layout: 1
 ```
 
-The corresponding section from the Barbican data bag schema begins
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L11) and ends
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L48).
+##### Command Line Executable
 
-Unlike in the previous section we will not change anything for the `deployment`
-section, since the attributes in this section, and consequently their schema as
-well, are uniform across all barclamps.
+Location: `bin/crowbar_mybarclamp`
 
-##### Schema Migrations
-
-* Location: `chef/data_bags/crowbar/migrate/mybarclamp/*.rb`
-
-While not strictly neccessary for a new barclamp, we are including this section
-for completeness' sake. If you are developing a new barclamp feel free to
-ignore it for now (we provided all the information you need for that in the
-[Default Data Bag](#default-data-bag) section), but remember it for later. You
-will need it for any change to the default data bag or data bag schema of
-existing barclamps.
-
-There is a shadow copy of the default data bag in Crowbar's database. When the
-barclamp is activated, its default *proposal* (our term for a barclamp's
-run-time set of parameters) is created from this shadow copy.  As a
-consequence, this shadow copy needs to be updated as the default data bag
-changes. To take care of this, you need to do two things:
-
-1) Provide a *migration* that adds the new/updated fields to the Crowbar web UI's
-   database.
-
-2) Increase the schema revision in `template-mybarclamp.json` by `1`. You will
-   find it under `deployment["mybarclamp"]["schema-revision"]`. Crowbar
-   compares this revision and the one of the shadow copy in its database to
-   determine which migrations to run.
-
-(2) is straightforward, but (1) is a bit more involved. The migration is a
-piece of ruby code that resides in `chef/data_bags/crowbar/migrate/mybarclamp/`.
-Files in this directory follow the following naming scheme:
+This executable is used by the crowbar command line client and is mostly a
+stub. Just copy this from another barclamp and change the `@barclamp` variable
+to your barclamp's name, which will leave you with something like this for our
+example barclamp:
 
 ```
-<schema_revision>_<description>.rb
+require File.join(File.expand_path(File.dirname(__FILE__)), "barclamp_lib")
+@barclamp = "mybarclamp"
+@timeout = 3600
+
+main
+```
+##### Minimal Edit View
+
+Locations:
+
+* `crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml`
+* `crowbar_framework/config/locales/mybarclamp/en.yml`
+
+Since we are building a minimal barclamp without much in the way of UI
+components, we can stick to the bare minimum for the "View" part of MVC. We
+only need its components to be present without much content.
+
+First of all we create the directories
+
+* `crowbar_framework/app/views/barclamp/mybarclamp`
+* and `crowbar_framework/config/locales/mybarclamp`.
+
+Next, we create the basic view in
+`crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml`.
+Since all we need is an edit field for raw parameters in JSON format, we can
+get away with only having the following snippet of code in there:
+
+```
+= attributes_for @proposal do
+  .panel-sub
+      = header show_raw_deployment?, true
 ```
 
-Where `<schema_revision>` is the schema revision you changed in
-`deployment["mybarclamp"]["schema-revision"]` and `<description>` is a short
-description of the change that may contain alphanumeric characters and
-underscores (`_`). In your migration you need to define the following two
-functions:
+The corresponding file from the Barbican barclamp is
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/views/barclamp/barbican/_edit_attributes.html.haml).
 
-* `def upgrade(ta, td, a, d)`
-* `def downgrade(ta, td, a, d)`
 
-Both have the same set of parameters with the following meaning:
+What remains for the view is a minimum English language locale in
+"crowbar_framework/config/locales/mybarclamp/en.yml". Since we do not display
+any form fields this can be fairly short. To give you an idea of how an actual
+form field's description would look we included one in our example below (note
+that this would require an entry in
+`crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml` to
+actually show up):
 
-* `ta`: the `attributes["mybarclamp"]` dictionary from `template-mybarclamp.json` in its current state.
-* `td`: the `attributes["mybarclamp"]` dictionary from `template-mybarclamp.json` in its current state.
-* `a`: the `attributes["mybarclamp"]` dictionary as it exists in the database.
-* `d`: the `deployment["mybarclamp"]` dictionary as it exists in the database.
+```
+en:
+  barclamp:
+    mybarclamp:
+      edit_attributes:
+        api_header: 'API Settings'
+        api:
+          bind_host: 'Address to listen on'
 
-The specification for these two functions is as follows:
+```
 
-* `upgrade`: modify `a` and `d` so they match the modified `ta` and `td`, respectively.
-* `downgrade`: revert the changes made in `upgrade` such that `a` and `b` is
-  back in the state it was in before the migration.
- 
-Beyond these two things you may also have to make runtime changes to nodes' run
-lists if you have modified your barclamp's roles. See this [Barbican
-migration](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/migrate/barbican/100_update_barbican_roles.rb)
-for an example of this situation.
+The corresponding file from the Barbican barclamp is
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/config/locales/barbican/en.yml).
+It contains field descriptions for a bunch of fields already, since this will
+make it easier to add UI elements later. Feel free to prepare your own barclamp
+in a similar manner.
 
-#### Crowbar Application Components
+##### Minimal Model Class
+
+Location: `crowbar_framework/app/models/mybarclamp_service.rb`
+
+With the view in place we need a model class to pre-process the proposal
+information and enforce constraints that cannot be expressed using the
+declarative means available in `template-mybarclamp.schema`, i.e. constraints
+that need program logic to check. Just like in the data bag sections we will
+again use the Barbican barclamp's proposal as an example and modify it bit by
+bit, so as a first step, copy `crowbar_framework/app/models/barbican_service.rb`
+to `crowbar_framework/app/models/mybarclamp_service.rb` and globally replace
+`barbican` by `mybarclamp` and `Barbican` by `Mybarclamp`, respectively.
+
+This will leave us with with something like this in the first few lines:
+
+```
+class MybarclampService < PacemakerServiceObject
+  def initialize(thelogger)
+    @bc_name = "mybarclamp"
+    @logger = thelogger
+  end
+```
+
+The corresponding lines from the Barbican barclamp's controller begin
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L17) and end
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L21).
+
+The next thing we need to change is the `role_constraints` method. This method
+tells Crowbar on how many nodes the service can be deployed, what types of node
+are valid and on which platform it may run. All the roles you defined in the
+chef sections need to be accounted for by this method. This means that we will
+need to add an entry for the `mybarclamp-compute` role. Below you will see a
+commented example:
+
+```
+    def role_constraints
+      {
+        "mybarclamp-controller" => {
+          "unique" => false,   # Set to `true` if this can only be deployed to one node.
+          "count" => 3,        # Number of allowed instances ('-1' means infinite)
+          "cluster" => true,   # Whether this role can be clustered (important for HA later on).
+          "admin" => false,    # Whether this role can be assigned to the Crowbar admin node.
+          "exclude_platform" => {
+            "suse" => "< 12.1",  # Do not deploy on SUSE version 12.1 and lower.
+            "windows" => "/.*/"  # Do not deploy on any Windows platforms.
+          }
+        },
+         "mybarclamp-compute" => {
+          "unique" => false,
+          "count" => -1,   # Can be deployed to an arbitrary number of Compute nodes
+          "cluster" => true,
+          "admin" => false,
+          "exclude_platform" => {
+            "suse" => "< 12.1",
+            "windows" => "/.*/"
+          }
+        }
+      end
+    end
+```
+The corresponding lines from the Barbican barclamp's controller begin
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L29) and end
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L43).
+
+Depending on your barclamp's dependencies you may need to adjust the list of
+dependencies returned by the `proposal_dependencies()` method. Since `mybarclamp`
+has the same dependencies as the Barbican barclamp, that is not neccessary in
+our case. You will find the Barbican barclamp's relevant line
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L47).
+
+Now we come to the method where we'll usually have most of our changes:
+`create_proposal()`. This method creates the run-time proposal in Crowbar's
+data base that contains the parameters as they will be passed to your chef
+recipe. It has two main purposes:
+
+1. Allocate roles to nodes automatically as they make sense (i.e. assign
+   `mybarclamp-controller` to a one or more designated controller nodes and assign
+   `mybarclamp-compute` to all compute nodes).
+
+2. Populate fields that you left blank in your default data bag (e.g. generate
+   random passwords).
+
+After adaption our method might look something like this:
+
+```
+  def create_proposal
+    @logger.debug("Mybarclamp create_proposal: entering")
+    base = super
+
+    nodes = NodeObject.all
+    server_nodes = nodes.select { |n| n.intended_role == "controller" }
+    server_nodes = [nodes.first] if server_nodes.empty?
+
+    compute_nodes = nodes.select { |n| n.intended_role == "compute" }
+    compute_nodes = [nodes.first] if compute_nodes.empty?
+
+    base["deployment"][@bc_name]["elements"] = {
+      "mybarclamp-controller" => [server_nodes.first.name]
+    } unless server_nodes.nil?
+
+    base["deployment"][@bc_name]["elements"] = {
+      "mybarclamp-compute" => compute_nodes
+    } unless compute_nodes.nil?
+
+
+    base["attributes"][@bc_name]["database_instance"] =
+      find_dep_proposal("database")
+    base["attributes"][@bc_name]["rabbitmq_instance"] =
+      find_dep_proposal("rabbitmq")
+    base["attributes"][@bc_name]["keystone_instance"] =
+      find_dep_proposal("keystone")
+    base["attributes"][@bc_name]["service_password"] = random_password
+    base["attributes"][@bc_name][:db][:password] = random_password
+
+    @logger.debug("Mybarclamp create_proposal: exiting")
+    base
+  end
+```
+
+The Barbican barclamp's `create_proposal` method starts
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L57) 
+and ends
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L57).
+
+##### Minimal Controller Class
+
+Location: `crowbar_framework/app/controllers/mybarclamp_controller.rb`
+
+The final thing we will need to the Crowbar application is a controller. This
+goes into `crowbar_framework/app/controllers/mybarclamp_controller.rb` and is
+very straightforward since we only need stub code in there (we normally don't
+do much in Barclamp controllers). This will suffice:
+
+```
+class MybarclampController < BarclampController
+  # Controller for Mybarclamp barclamp
+
+  protected
+
+  def initialize_service
+    @service_object = MybarclampService.new logger
+  end
+end
+```
+
+As you can see, Barbican has the same [piece of boilerplate
+code](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/controllers/barbican_controller.rb).
 
 ### Local Testing
 
