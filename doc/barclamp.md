@@ -400,15 +400,19 @@ For a newly created Barclamp the data bag consists of a _data bag schema_
 _default data bag_ (`chef/data_bags/crowbar/template-<your barclamp's
 name>.json`). Both are in JSON format. The _data bag schema_ describes how your
 data bag is structured and imposes constraints such as data type and
-permissible values on individual fields (much like an XML schema). The _default
-data bag_ contains default settings for these parameters where defaults can
-reasonably be provided. There are some special cases such as user names and
-passwords that are initially left blank and will be filled in by the Crowbar
-web UI when the barclamp is activated, so feel free to leave fields blank if
-you plan on adding code to the Crowbar web UI to populate them or make use of
-existing web UI.
+permissible values on individual fields (much like an XML schema). It is used
+to validate your barclamp's parameters, especially when the user edits its
+parameters directly as JSON, either in the Web UI's raw mode or through the
+Crowbar command line client.
 
-When fields are added to or removed from an existing data bag's data bag, you
+The _default data bag_ contains default settings for these parameters where
+defaults can reasonably be provided. There are some special cases such as user
+names and passwords that are initially left blank and will be filled in by the
+Crowbar web UI when the barclamp is activated, so feel free to leave fields
+blank if you plan on adding code to the Crowbar web UI to populate them or make
+use of existing web UI.
+
+When fields are added to or removed from an existing barclamp's data bag, you
 will need to add another component to the data bag: a _migration_. This is
 essentially a database migration for the Crowbar web UI since data bags map
 directly to a table in the Crowbar web UI's database. To keep that database
@@ -578,13 +582,6 @@ schema holds constraints for every attribute in the default data bag, plus
 for optional attributes that may not be set in the default data bag but can
 nonetheless be added by the user.
 
-This schema translates directly to the database schema for the table where the
-Crowbar web UI will store the Barclamp's parameters. Hence it is revisioned
-(the revision is stored in `deployment["mybarclamp"]["schema-revision"]`
-`template-mybarclamp.schema`). Every revision later than the initial one comes
-with a migration in the `chef/data_bags/crowbar/migrate/mybarclamp/` directory
-(more on that in the next chapter).
-
 The schema contains a hierarchy of dictionaries that mirror the data structure
 in `template-mybarclamp.json`. The keys in this hierarchy are the attribute
 names from `template-mybarclamp.json` and the values are dictionaries of
@@ -695,7 +692,65 @@ Unlike in the previous section we will not change anything for the `deployment`
 section, since the attributes in this section, and consequently their schema as
 well, are uniform across all barclamps.
 
-##### Schema Migration
+##### Schema Migrations
+
+* Location: `chef/data_bags/crowbar/migrate/mybarclamp/*.rb`
+
+While not strictly neccessary for a new barclamp, we are including this section
+for completeness' sake. If you are developing a new barclamp feel free to
+ignore it for now (we provided all the information you need for that in the
+[Default Data Bag](#default-data-bag) section), but remember it for later. You
+will need it for any change to the default data bag or data bag schema of
+existing barclamps.
+
+There is a shadow copy of the default data bag in Crowbar's database. When the
+barclamp is activated, its default *proposal* (our term for a barclamp's
+run-time set of parameters) is created from this shadow copy.  As a
+consequence, this shadow copy needs to be updated as the default data bag
+changes. To take care of this, you need to do two things:
+
+1) Provide a *migration* that adds the new/updated fields to the Crowbar web UI's
+   database.
+
+2) Increase the schema revision in `template-mybarclamp.json` by `1`. You will
+   find it under `deployment["mybarclamp"]["schema-revision"]`. Crowbar
+   compares this revision and the one of the shadow copy in its database to
+   determine which migrations to run.
+
+(2) is straightforward, but (1) is a bit more involved. The migration is a
+piece of ruby code that resides in `chef/data_bags/crowbar/migrate/mybarclamp/`.
+Files in this directory follow the following naming scheme:
+
+```
+<schema_revision>_<description>.rb
+```
+
+Where `<schema_revision>` is the schema revision you changed in
+`deployment["mybarclamp"]["schema-revision"]` and `<description>` is a short
+description of the change that may contain alphanumeric characters and
+underscores (`_`). In your migration you need to define the following two
+functions:
+
+* `def upgrade(ta, td, a, d)`
+* `def downgrade(ta, td, a, d)`
+
+Both have the same set of parameters with the following meaning:
+
+* `ta`: the `attributes["mybarclamp"]` dictionary from `template-mybarclamp.json` in its current state.
+* `td`: the `attributes["mybarclamp"]` dictionary from `template-mybarclamp.json` in its current state.
+* `a`: the `attributes["mybarclamp"]` dictionary as it exists in the database.
+* `d`: the `deployment["mybarclamp"]` dictionary as it exists in the database.
+
+The specification for these two functions is as follows:
+
+* `upgrade`: modify `a` and `d` so they match the modified `ta` and `td`, respectively.
+* `downgrade`: revert the changes made in `upgrade` such that `a` and `b` is
+  back in the state it was in before the migration.
+ 
+Beyond these two things you may also have to make runtime changes to nodes' run
+lists if you have modified your barclamp's roles. See this [Barbican
+migration](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/migrate/barbican/100_update_barbican_roles.rb)
+for an example of this situation.
 
 #### Crowbar Application Components
 
