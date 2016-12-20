@@ -2,7 +2,8 @@
 
 This document is an introduction to Barclamp development. It will guide you
 through all the steps neccessary to create a minimal (without UI elements)
-Barclamp for Crowbar.
+Barclamp for Crowbar. It will then guide you through all the testing, CI and
+review steps until the point where it gets merged into Crowbar.
 
 ## Terms and definitions
 
@@ -234,8 +235,8 @@ files and runtime state handled by your barclamp. As a first step, create
 
 Locations:
 
-* `chef/cookbooks//metadata.rb`
-* `chef/cookbooks//README.md`
+* `chef/cookbooks/mybarclamp/metadata.rb`
+* `chef/cookbooks/mybarclamp/README.md`
 
 Before we begin with the cookbook proper we will need to take care of some
 boilerplate files. The first of these is `metadata.rb`. It mostly contains
@@ -275,7 +276,7 @@ there).
 
 #### Recipes
 
-Location: `chef/cookbooks//recipes/*.rb`
+Location: `chef/cookbooks/mybarclamp/recipes/*.rb`
 
 [Recipes](https://docs.chef.io/recipes.html) make up the bulk of your chef
 cookbook's payload. These recipes are written in Ruby (hence they must have a
@@ -307,8 +308,8 @@ application's architecture perfectly.
 
 Locations:
 
-* Role recipes: `chef/cookbooks//recipes`
-* Role definitions: `chef/roles/role__*.rb`
+* Role recipes: `chef/cookbooks/mybarclamp/recipes`
+* Role definitions: `chef/roles/role_mybarclamp_*.rb`
 
 Once you've got a set of chef recipes, you'll need to organize them into roles.
 A role aggregates one or more chef recipes and deploys all of its component
@@ -329,8 +330,8 @@ characters. Assuming you've got two separate role recipes, one for the compute
 nodes and one for OpenStack controller nodes, you might end up with something
 like this:
 
-* `chef/cookbooks//role_mybarclamp_compute.rb`
-* `chef/cookbooks//role_mybarclamp_controller.rb`
+* `chef/cookbooks/mybarclamp/role_mybarclamp_compute.rb`
+* `chef/cookbooks/mybarclamp/role_mybarclamp_controller.rb`
 
 This role recipe contains one or more `include_recipe` statements to pull in
 component recipes and a validity check that asks the Crowbar application
@@ -385,9 +386,9 @@ section.
 
 Locations:
 
-* Data bag schema: `chef/data_bags/crowbar/template-.schema`
-* Default data bag: `chef/data_bags/crowbar/template-.json`
-* Migrations: `chef/data_bags/crowbar/migrate//*.rb`
+* Data bag schema: `chef/data_bags/crowbar/template-mybarclamp.schema`
+* Default data bag: `chef/data_bags/crowbar/template-mybarclamp.json`
+* Migrations: `chef/data_bags/crowbar/migrate/mybarclamp/*.rb`
 
 Now that you have your recipes and roles defined you should also know what
 configuration settings are static (e.g. best practice settings you want to
@@ -397,14 +398,14 @@ or the OpenStack identity URL). Everything you want to be configurable will
 need to go into the `data bag`.
 
 For a newly created Barclamp the data bag consists of a _data bag schema_
-(`chef/data_bags/crowbar/template-.schema`) and a
-_default data bag_ (`chef/data_bags/crowbar/template-<your barclamp's
-name>.json`). Both are in JSON format. The _data bag schema_ describes how your
-data bag is structured and imposes constraints such as data type and
-permissible values on individual fields (much like an XML schema). It is used
-to validate your barclamp's parameters, especially when the user edits its
-parameters directly as JSON, either in the Web UI's raw mode or through the
-Crowbar command line client.
+(`chef/data_bags/crowbar/template-mybarclamp.schema`) and a
+_default data bag_ (`chef/data_bags/crowbar/template-mybarclamp.json`). Both
+are in JSON format. The _data bag schema_ describes how your data bag is
+structured and imposes constraints such as data type and permissible values on
+individual fields (much like an XML schema). It is used to validate your
+barclamp's parameters, especially when the user edits its parameters directly
+as JSON, either in the Web UI's raw mode or through the Crowbar command line
+client.
 
 The _default data bag_ contains default settings for these parameters where
 defaults can reasonably be provided. There are some special cases such as user
@@ -426,10 +427,10 @@ it is easier to fill that with content first, and then produce a schema to match
 
 ##### Default Data Bag
 
-* Location: `chef/data_bags/crowbar/template-.json`
+* Location: `chef/data_bags/crowbar/template-mybarclamp.json`
 
 First of all, copy an existing default data bag to
-`chef/data_bags/crowbar/template-.json`. You will modify
+`chef/data_bags/crowbar/template-mybarclamp.json`. You will modify
 this data bag to contain your own barclamp's parameters. This is easier and far
 less error prone than writing a default data bag from scratch. Throughout this
 section I will assume you used the
@@ -513,7 +514,7 @@ there:
    with every new stable Crowbar release. Please ask a Crowbar developer about
    the current value). Whenever the data bag is changed, this revision is
    incremented by `1` and a corresponding migration is added to the
-   `chef/data_bags/crowbar/migrate//` directory. Since you are
+   `chef/data_bags/crowbar/migrate/mybarclamp/` directory. Since you are
    writing a new barclamp, set this to  the current `master` branch's base
    revision.
 
@@ -575,7 +576,7 @@ The corresponding section of the Barbican default data bag begins
 
 ##### Data bag schema
 
-* Location: `chef/data_bags/crowbar/template-.schema`
+* Location: `chef/data_bags/crowbar/template-mybarclamp.schema`
 
 With your default data bag finished you can now use the attributes and their
 data types from the default data bag as a guide for definining its schema. The
@@ -584,8 +585,8 @@ for optional attributes that may not be set in the default data bag but can
 nonetheless be added by the user.
 
 The schema contains a hierarchy of dictionaries that mirror the data structure
-in `template-.json`. The keys in this hierarchy are the attribute
-names from `template-.json` and the values are dictionaries of
+in `template-mybarclamp.json`. The keys in this hierarchy are the attribute
+names from `template-mybarclamp.json` and the values are dictionaries of
 constraints for the attribute in question. Such a dictionary of constraints can
 have the following fields (these are only the most common ones):
 
@@ -608,7 +609,7 @@ have the following fields (these are only the most common ones):
 Armed with this knowledge we can now create a schema that matches the default
 data bag from the previous section. Similar to the previous section we will
 start out with a copy of the Barbican barclamp's schema
-(`template-barbican.schema`), which we'll copy to `template-.json`.
+(`template-barbican.schema`), which we'll copy to `template-mybarclamp.json`.
 
 Again we will first globally search and replace `barbican` by `` and
 then go through it section by section, starting with the top-level fields. The
@@ -907,9 +908,65 @@ code](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49
 
 ### Local Testing
 
+In the previous sections you created a scaffold for your barclamp, possibly
+with some pieces of implementation as well. Before you create a pull request
+for that code you should test it locally now. While there is a school of
+thought that advocates creating pull requests as soon as the first commit is
+in, this approach is problematic for Crowbar development: one of our CI tests
+is the [Hound](https://houndci.com/) code style checker, which will generate a
+notification for every single violation it detects. Since each commit is likely
+to contain multiple such violations, it is better to get your code working
+first and then present it to Hound at that point. If you test and debug your
+barclamp iteratively while the pull request is already open you will likely
+generate a lot of needless spam (e.g. for code that may end up eventually
+getting removed entirely in the course of development)
+
+For testing your code locally you will need the development environment
+described in the [Prerequisites](#prerequisites) section. So build such an
+environment now (if you haven't already done so) and make sure you've got an
+up-to-date checkout of your `crowbar-openstack` fork in
+`/root/openstack-crowbar` on the development environment's Crowbar admin node.
+This is also a good time to create a LVM snapshot or other backup of your
+Crowbar admin node in case you break it in the course of debugging.
+
+With your Crowbar node backed up and a checkout of your `crowbar-openstack`
+fork in place, apply your code to the running Crowbar instance using the
+commands from the [Preparations for Crowbar Node](#preparations-for-crowbar-node)
+section:
+
+```
+Fpatch   # Fix any merge conflicts reported by this command before proceeding
+sync_crowbar
+```
+
+If you navigate to your Crowbar Admin Node's web interface now and select
+*OpenStack* from the barclamp menu, you should see your new barclamp listed. If
+it doesn't appear or you got an error message from the `sync_crowbar` command
+you will now have to start debugging. Common errors at this stage are mostly
+bad file names, or problems in `mybarclamp.yml`.
+
 #### Create Proposal
 
-#### Apply Proposal
+Once your barclamp appears in the list of barclamps, the next testing step is
+creating a *proposal*: this means creating a run-time configuration for the
+Barclamp and saving it.
+
+First of all, click on the `Create` button for your Barclamp in the list of
+barclamps. If this fails the reason is usually due to one of the following:
+
+* Errors in `crowbar_framework/app/models/mybarclamp_service.rb`
+* Error in `crowbar_framework/app/controllers/mybarclamp_controller.rb`
+* Errors in `crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml`
+* Errors in your default data bag, e.g.`chef/data_bags/crowbar/template-mybarclamp.json`
+  schema`. This is what error messages about invalid JSON syntax usually refer
+  to.
+
+Upon failure the Crowbar web UI will usually (but not in all cases) display a
+stack trace that will lead you to the problematic file and at least hint at
+what the problem is. Once creating the barclamp succeeds you can advance to the
+next step.
+
+#### Save Proposal
 
 #### Implement and Debug Chef Recipes
 
