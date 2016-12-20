@@ -315,11 +315,31 @@ Once you've got a set of chef recipes, you'll need to organize them into roles.
 A role aggregates one or more chef recipes and deploys all of its component
 chef recipes. Crowbar can assign roles to one or more nodes (subject to
 constraints defined in the Crowbar application). In the HA case it can assign
-roles to one or more clusters of roles.
+roles to one or more clusters of roles. It pays to spend some time on getting
+the roles you need right from the start because you will need to modify a lot
+of code to add new roles or remove existing ones later. Roles vary in scope
+from deploying just a single service (such as a logging agent) to deploying
+multiple related services (such as all of an OpenStack service's controller
+side daemons). All roles' unifying feature is that they are a container for
+something that gets deployed to a certain type of machine which may among other
+things be:
 
-Roles are defined in two places. First, you create a _role recipe_ in the
-`chef/cookbooks/<your_barclamp_name>/recipes` directory. Our naming convention
-for role recipes is as follows:
+* "Any machine orchestrated by Crowbar"
+
+* "Any OpenStack controller node"
+
+* "Any OpenStack compute node"
+
+* "Any Node in the Ceph Cluster"
+
+* "Any Ceph OSD node"
+
+We have a limited range of node types in Crowbar to define types of roles.
+Beyond that
+
+Roles are defined in two places in the chef cookbook. First, you create a _role
+recipe_ in the `chef/cookbooks/<your_barclamp_name>/recipes` directory. Our
+naming convention for role recipes is as follows:
 
 ```
 role_<barclamp name>_<role description>.rb
@@ -908,6 +928,15 @@ code](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49
 
 ### Local Testing
 
+*Note: Whenever you make changes during this phase, make them to the
+`crowbar-openstack` git checkout in `/root/crowbar-openstack`, commit them, and
+then run the following commands afterwards to make them known to Crowbar:*
+
+```
+Cpatch
+sync_crowbar
+```
+
 In the previous sections you created a scaffold for your barclamp, possibly
 with some pieces of implementation as well. Before you create a pull request
 for that code you should test it locally now. While there is a school of
@@ -955,20 +984,74 @@ First of all, click on the `Create` button for your Barclamp in the list of
 barclamps. If this fails the reason is usually due to one of the following:
 
 * Errors in `crowbar_framework/app/models/mybarclamp_service.rb`
-* Error in `crowbar_framework/app/controllers/mybarclamp_controller.rb`
-* Errors in `crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml`
+* Syntax or naming errors in `crowbar_framework/app/controllers/mybarclamp_controller.rb`
+  (very uncommon since it's just boilerplate that can be produced through a
+  simple search-and-replace operation on another barclamp's controller)
+* `crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml`
 * Errors in your default data bag, e.g.`chef/data_bags/crowbar/template-mybarclamp.json`
   schema`. This is what error messages about invalid JSON syntax usually refer
   to.
 
 Upon failure the Crowbar web UI will usually (but not in all cases) display a
 stack trace that will lead you to the problematic file and at least hint at
-what the problem is. Once creating the barclamp succeeds you can advance to the
-next step.
+what the problem is. Once creating the proposal succeed you will see the
+barclamp's view where you will be able to edit the proposal.
 
 #### Save Proposal
 
+The next hurdle for your barclamp is saving the proposal (runtime
+configuration) Crowbar created from its default data bag. To test this, click
+the `Save` button in the barclamp's view you reached at the end of the previous
+step. This will cause the automatically generated proposal to be validated and
+saved to Crowbar's database. If this fails this is usually due to one of the
+following reasons:
+
+* Type mismatches between `template-mybarclamp.json` and
+  `template-mybarclamp.schema`. This is the most common error.
+
+* Logical errors in `crowbar_framework/app/models/mybarclamp_service.rb`. These
+  may most commonly are role constraint mismatches or fields required by the
+  schema but not filled in by the model.
+
+Once you have successfully saved your proposal you can advance to the final
+step of local testing: applying the proposal.
+
+#### Apply Proposal
+
+Depending on how elaborate your chef recipes are at this stage this step can
+either be very short or very long. To start testing you simply click the
+*Apply* button in your barclamp's view and wait for the Crowbar Web UI to
+report back to you. This may take a fair amount of time. Here's why:
+
+As you hit *Apply*, the chef roles you defined will be added to the run list
+for the nodes they are assigned to. That run list is usually not empty, though.
+For instance, an OpenStack controller usually has about 20 roles in its run
+list, to which your own gets added. Compute nodes usually have a lot less. All
+these roles are now applied and chef checks *all* of their resources to make
+sure they are still in the desired state at a minimum (and if they are not it
+adjusts them).
+
+Needless to say, the whole process takes a long time. This is where the scratch
+node from the [Prerequisites](#prerequisites) section comes in. Instead of
+assigning your roles controller side role(s) to the controller all the other
+roles are assigned to, you assign it to the second designated controller node,
+which will only have your own barclamp in its run list, which will speed up
+applying your barclamp a great deal.
+
+If the proposal applied successfully you can move on to the next step (or even
+skip it if your chef recipes already contained everything you needed to deploy
+your application at this point). If it fails to apply at some stage you will
+get a stack trace that tells you exactly which chef recipe went wrong on which
+line.
+
 #### Implement and Debug Chef Recipes
+
+The final step is fleshing out your chef recipes if you haven't already done
+so. We cannot offer much guidance at this point, because this mostly requires
+your own knowledge of the application you are deploying. You will have to
+iterate on this until the application deploys to your satisfaction. Once it
+does (and you have preferably tested it against a test setup rebuilt from
+scratch) you are finally ready to submit a pull request.
 
 ### Pull Request Testing
 
