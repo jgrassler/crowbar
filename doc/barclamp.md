@@ -1091,10 +1091,87 @@ setup rebuilt from scratch) you are finally ready to submit a pull request.
 
 ### Pull Request Testing
 
-Now that your new barclamp deploys your application to your
+Now that your new barclamp deploys your application successfully, you can
+submit a GitHub pull request against the `crowbar-openstack` `master` branch.
+This also applies if you are targetting a stable Crowbar release: you will
+still need to submit a pull request against `master` first and then cherry-pick
+the change in `master` to the stable branch in a separate pull request.
 
-#### Fix Hound Violations
+Once the pull request is submitted, various CI tests will run and reviewers
+from the core Crowbar team will eventually take a look as well. This is likely
+to result in further changes for anything non-trivial. If you make any
+non-trivial changes at this stage (and perhaps even then), please make sure
+they didn't break anything by repeating local testing with these changes in
+place.
+
+#### Hound Style Check
+
+The simplest of our CI tests is a [Hound](https://houndci.com/) Ruby code style
+check. It is very pedantic and will usually find something to object to in the
+cleanest pull request (even Crowbar team members usually generate multiple
+Hound violations in the first iteration of a new pull request). It will
+annotate all lines in your code that fail its style checks. Address all of
+these comments and update your pull-request. Hound will re-examine it and may
+find new problems. Re-iterate until Hound passes without any objections.
 
 #### Mkcloud Gating
 
-#### Reviewer approval
+While it is mandatory for a pull request to get merged, this test currently
+doesn't run for all pull requests. `mkcloud` gate jobs will currently only run
+automatically for pull requests submitted by members of the Crowbar core
+development team or people granted explicit permission to run them. If that is
+not the case for you, you will have to ask a member of the Crowbar team to help
+you since a passing `mkcloud` gate is mandatory for all changes to Crowbar and
+its barclamps.
+
+The `mkcloud` gating uses `mkcloud` to deploy SUSE OpenStack Cloud with Crowbar
+patched to include your pull request. If this succeeds, the `mkcloud` gate
+passes. 
+
+There is a catch though: since your barclamp is new, the `mkcloud` gate will
+not automatically enable it. Consequently, the `mkcloud` gate will pass anyway
+if your barclamp did not actively break other barclamps. This level of scrutiny
+is fine for a new barclamp, but once your barclamp is merged, you will need to
+add test automation. See the section [Adding Test Automation](#adding-test-automation) 
+for detailed instructions on how to do this after your barlcamp merges. Adding
+(or rather enabling) test automation for your barclamp would not make much
+sense before that point: since the barclamp is not available _all_ our
+`mkcloud` testing would fail until the barclamp's pull request is merged and
+packaged.
+
+For now we will focus on getting your barclamp merged, and scale the last
+hurdle: getting reviewer approval.
+
+#### Reviewer Approval
+
+Once all automated tests pass (or even before). Members of the Crowbar team
+will comment on your code and ask you about the reasons for architectural
+decisions or implementation details. They may also ask you to change things. If
+that happens you may again have to go back to testing your changed code locally
+to verify it still performs as requested. In fact this is strongly recommended
+for any change, since `mkcloud` gating will not reveal problems introduced by
+these changes without the test automation pull request from the next section.
+
+Once they are happy they will approve your pull request. Your pull request will
+need two approvals by Crowbar team members to get merged. Before it gets
+merged, please rebase your pull request so it only consists of a single commit.
+
+#### Adding Test Automation
+
+To include your barclamp in `mkcloud` test automation you would fork the
+[automation]() repository, add your barclamp to the list of barclamps enabled
+by `qa_crobarsetup.sh` and submit a pull request. You can use [this pull request](https://github.com/SUSE-Cloud/automation/commit/340de0744bae660a1fabbdec812929b9a159a586)
+which adds Barbican as an example. Note the default value for the
+`want_barbican` variable which is empty in this commit. For the Barbican
+barclamp, this was changed in a
+[follow-up commit](https://github.com/SUSE-Cloud/automation/commit/0d9d0115fcb8eb236e16effed2e5e5a354fb142a) 
+as not all Barbican packages were available at the time of the first commit.
+
+In the simplest case you should be able to combine something analogous to this
+commit into two pull request. For less than simple scenarios (e.g. if your
+barclamp needs VM side infrastructure such as additional block devices in
+place) you will have to add additional setup code to 
+[mkcloud](https://github.com/SUSE-Cloud/automation/blob/master/scripts/mkcloud)
+and/or
+[qa_crowbarsetup.sh](https://github.com/SUSE-Cloud/automation/blob/master/scripts/qa_crobarsetup.sh)
+to take care of your barclamp's needs.
