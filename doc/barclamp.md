@@ -1048,12 +1048,50 @@ line.
 
 The final step is fleshing out your chef recipes if you haven't already done
 so. We cannot offer much guidance at this point, because this mostly requires
-your own knowledge of the application you are deploying. You will have to
-iterate on this until the application deploys to your satisfaction. Once it
-does (and you have preferably tested it against a test setup rebuilt from
-scratch) you are finally ready to submit a pull request.
+your own knowledge of the application you are deploying. On the Crowbar side
+there is not that much documentation, unfortunately, so your best bet is
+studying existing barclamps' chef recipes. That being said, here are some leads
+to documentation and useful helpers that will aid you in cookbook development:
+
+* [Upstream documentation on Chef Cookbooks](https://docs.chef.io/cookbooks.html): 
+  note that we are using a fairly old Chef version, so some of the information
+  you will find there will not apply. Documentation on basic resources should
+  be fine, though.
+
+* [KeystoneHelper](https://github.com/crowbar/crowbar-openstack/blob/master/chef/cookbooks/keystone/libraries/helpers.rb):
+  this library is part of the Keystone barclamp and contains various useful
+  methods you can use in your recipes. The most useful is probably
+  `keystone_settings()` which will provide you with the credentials for a
+  service account you can use in your service's configuration files. See the
+  Barbican barclamp's [common.rb recipe](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/cookbooks/barbican/recipes/common.rb#L116)
+  for a usage example.
+
+* [fetch_database_settings()](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/cookbooks/crowbar-openstack/libraries/helpers.rb#L23):
+  This method from the `crowbar-openstack` barclamp provides your recipes with
+  a database username and an automatically generated password, and other
+  database settings such as your database's instance's host name, port and
+  database type. Again, see the Barbican barclamp for a 
+  [usage example](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/cookbooks/crowbar-openstack/libraries/helpers.rb#L23).
+
+* `database`, `database_user`: these are resource types defined in the 
+  [database barclamp](https://github.com/crowbar/crowbar-openstack/tree/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/cookbooks/database/libraries).
+  They allow you to create databases and database user accounts to access them.
+  The Barbican barclamp provides a [usage example](for these resource types as
+  well.
+
+* `crowbar_openstack_wsgi`: this is a resource defined in the 
+  [crowbar-openstack barclamp](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/cookbooks/crowbar-openstack/providers/wsgi.rb)
+  and allows you to easily deploy a WSGI application. We use this for all
+  OpenStack API services. Once more the Barbican barclamp will serve as a 
+  [usage example](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/cookbooks/barbican/recipes/api.rb#L127).
+
+You will have to iterate on this step until the application deploys to your
+satisfaction. Once it does (and you have preferably tested it against a test
+setup rebuilt from scratch) you are finally ready to submit a pull request.
 
 ### Pull Request Testing
+
+Now that your new barclamp deploys your application to your
 
 #### Fix Hound Violations
 
