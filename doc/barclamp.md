@@ -5,6 +5,13 @@ through all the steps neccessary to create a minimal (without UI elements)
 Barclamp for Crowbar. It will then guide you through all the testing, CI and
 review steps until the point where it gets merged into Crowbar.
 
+## What is a Barclamp?
+
+A barclamp is a plugin for Crowbar that configures a particular service or
+group of services. It contains a che cookbook with one or more roles to
+perform the actual configuration work and Crowbar UI code to parametrize this
+chef cookbook and orchestrate applying its roles to individual machines.
+
 ## Terms and definitions
 
 We will assume throughout this text that your barclamp is will be named
@@ -56,6 +63,14 @@ Optionally (but strongly recommended) you can also
   backup of this node as well to guard against breakage and allow for
   clean-slate deployment of your barclamp's controller side components.
 
+The best way to set up your scratch node is to make it a lonely node. To this
+end, you will need to re-run mkcloud after you have created your cloud:
+
+```
+nodenumberlonelynode=1 mkcloud setuplonelynodes crowbar_register
+
+```
+
 ## Development Environment
 
 Most of your development will take place on your Crowbar node (log in as root).
@@ -94,18 +109,26 @@ export COMMIT="6cefbd80254141a63f4c86df195cd930ac7eb10b"
 # Insert a space delimited list of the Barclamps you are working on here.
 export BARCLAMPS="nova magnum"
 
+# Insert your own barclamp's name here:
+export BARCLAMP_NAME=mybarclamp
+
+# Insert the path to your barclamp collection checkout here (in case it's
+# somewhere other than /root/crowbar-openstack)
+
+export BARCLAMP_FORK_PATH=/root/crowbar-openstack
+
 export GIT_AUTHOR_NAME="$C_NAME"
 export GIT_AUTHOR_EMAIL="$C_EMAIL"
 export GIT_COMMITTER_NAME="$C_NAME"
-export GIT_COMMITTER_EMAIL="#C_EMAIL"
+export GIT_COMMITTER_EMAIL="$C_EMAIL"
 
-alias Cpatch="(cd ~/crowbar-openstack; git show | patch -p1 --merge -d /opt/dell)"
+alias Cpatch="(cd $BARCLAMP_FORK_PATH; git show | patch -N -p1 --merge -d /opt/dell)"
 
 # Full patch: applies your fork completely against /opt/crowbar
 function Fpatch()
   {
-  cd ~/crowbar-openstack
-  git diff "$COMMIT^" HEAD | patch --merge -p1 -d /opt/dell
+  cd $BARCLAMP_FORK_PATH
+  git diff "$COMMIT^" HEAD | patch -N --merge -p1 -d /opt/dell
   for f in /opt/dell/*.yml
     do
     ln -s $f /opt/dell/crowbar_framework/barclamps 2>&1 > /dev/null
@@ -118,7 +141,7 @@ sync_crowbar()
   barclamp_install.rb /opt/dell/crowbar_framework/barclamps/ &&
   for barclamp in $BARCLAMPS
     do
-    knife cookbook upload -o /opt/dell/chef/cookbooks/ mybarclamp
+    knife cookbook upload -o /opt/dell/chef/cookbooks/ $BARCLAMP_NAME
     done
   systemctl restart crowbar
   }
@@ -136,7 +159,7 @@ thus defined in the following sections. A short explanation of the three:
   `/opt/dell` (use this after each new commit). This command may cause merge
   conflicts. If this happens, resolve them before doing anything else.
 
-* `sync-crowbar` will make any updated state in `/opt/dell` appear in the
+* `sync_crowbar` will make any updated state in `/opt/dell` appear in the
   running Crowbar instance. Run this after every change, no matter how minor,
   in `/opt/dell`.
 
@@ -334,8 +357,24 @@ things be:
 
 * "Any Ceph OSD node"
 
-We have a limited range of node types in Crowbar to define types of roles.
-Beyond that
+We have a limited range of node types in Crowbar to define types of roles,
+namely, these are the following:
+
+* `compute`
+
+* `controller`
+
+* `network`
+
+* `storage`
+
+If you need a dedicated node type for your barclamp you will have to add it to
+[crowbar-core](https://github.com/crowbar/crowbar-core) in the following
+places:
+
+* [`node_wall_list()` in `crowbar_framework/app/helpers/nodes_helper.rb`](https://github.com/crowbar/crowbar-core/blob/8a6f1c2c44717e3ceb066695312fef494e410f94/crowbar_framework/app/helpers/nodes_helper.rb#L361)
+* [`role()` in `bin/crowbar_machines`](https://github.com/crowbar/crowbar-core/blob/8a6f1c2c44717e3ceb066695312fef494e410f94/bin/crowbar_machines#L358)
+* [The list entry mappings in `crowbar_framework/config/locales/crowbar/en.yml`](https://github.com/crowbar/crowbar-core/blob/8a6f1c2c44717e3ceb066695312fef494e410f94/bin/crowbar_machines#L358)
 
 Roles are defined in two places in the chef cookbook. First, you create a _role
 recipe_ in the `chef/cookbooks/<your_barclamp_name>/recipes` directory. Our
@@ -496,7 +535,7 @@ When you are done `attributes[""]` should look something like this:
         "api" : {
            "bind_host" : "*",
            "bind_port" : 12345,
-           "logfile" : "/var/log/myservice/myservice-api.log",
+           "logfile" : "/var/log/myservice/myservice-api.log"
         },
         "backend" : {
             db_plugin = "postgres",
@@ -559,7 +598,7 @@ there:
 
 When you are done `deployment[""]` should look something like this
 (this example assumes you have defined a `mybarclamp-compute` and a
-`-controller` role):
+`mybarclamp-controller` role):
 
 ```
   "deployment": {
@@ -722,6 +761,7 @@ require File.join(File.expand_path(File.dirname(__FILE__)), "barclamp_lib")
 
 main
 ```
+
 ##### Minimal Edit View
 
 Locations:
@@ -736,7 +776,7 @@ only need its components to be present without much content.
 First of all we create the directories
 
 * `crowbar_framework/app/views/barclamp/mybarclamp`
-* and `crowbar_framework/config/locales/mybarclamp`.
+* `crowbar_framework/config/locales/mybarclamp`
 
 Next, we create the basic view in
 `crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml`.
@@ -754,7 +794,7 @@ The corresponding file from the Barbican barclamp is
 
 
 What remains for the view is a minimum English language locale in
-"crowbar_framework/config/locales/mybarclamp/en.yml". Since we do not display
+`crowbar_framework/config/locales/mybarclamp/en.yml`. Since we do not display
 any form fields this can be fairly short. To give you an idea of how an actual
 form field's description would look we included one in our example below (note
 that this would require an entry in
@@ -988,9 +1028,8 @@ barclamps. If this fails the reason is usually due to one of the following:
   (very uncommon since it's just boilerplate that can be produced through a
   simple search-and-replace operation on another barclamp's controller)
 * `crowbar_framework/app/views/barclamp/mybarclamp/_edit_attributes.html.haml`
-* Errors in your default data bag, e.g.`chef/data_bags/crowbar/template-mybarclamp.json`
-  schema`. This is what error messages about invalid JSON syntax usually refer
-  to.
+* Errors in your default data bag schema, e.g.`chef/data_bags/crowbar/template-mybarclamp.json`.
+  This is what error messages about invalid JSON syntax usually refer to.
 
 Upon failure the Crowbar web UI will usually (but not in all cases) display a
 stack trace that will lead you to the problematic file and at least hint at
@@ -1159,8 +1198,10 @@ merged, please rebase your pull request so it only consists of a single commit.
 #### Adding Test Automation
 
 To include your barclamp in `mkcloud` test automation you would fork the
-[automation]() repository, add your barclamp to the list of barclamps enabled
-by `qa_crobarsetup.sh` and submit a pull request. You can use [this pull request](https://github.com/SUSE-Cloud/automation/commit/340de0744bae660a1fabbdec812929b9a159a586)
+[automation](https://github.com/SUSE-Cloud/automation) repository, add your
+barclamp to the list of barclamps enabled by `qa_crobarsetup.sh` and submit a
+pull request. You can use 
+[this pull request](https://github.com/SUSE-Cloud/automation/commit/340de0744bae660a1fabbdec812929b9a159a586)
 which adds Barbican as an example. Note the default value for the
 `want_barbican` variable which is empty in this commit. For the Barbican
 barclamp, this was changed in a
