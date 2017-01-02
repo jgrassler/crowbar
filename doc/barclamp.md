@@ -8,7 +8,7 @@ review steps until the point where it gets merged into Crowbar.
 ## What is a Barclamp?
 
 A barclamp is a plugin for Crowbar that configures a particular service or
-group of services. It contains a che cookbook with one or more roles to
+group of services. It contains a Chef cookbook with one or more roles to
 perform the actual configuration work and Crowbar UI code to parametrize this
 chef cookbook and orchestrate applying its roles to individual machines.
 
