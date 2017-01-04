@@ -106,11 +106,13 @@ C_EMAIL="email@address.invalid"
 # Replace "6cefbd80254141a63f4c86df195cd930ac7eb10b" by your first commit's ID.
 export COMMIT="6cefbd80254141a63f4c86df195cd930ac7eb10b"
 
-# Insert a space delimited list of the Barclamps you are working on here.
-export BARCLAMPS="nova magnum"
-
 # Insert your own barclamp's name here:
 export BARCLAMP_NAME=mybarclamp
+
+# Insert a space delimited list of the Barclamps you are working on here (only
+# required if your barclamp requires changes to other barclamps as well).
+
+export BARCLAMPS="$BARCLAMP_NAME"
 
 # Insert the path to your barclamp collection checkout here (in case it's
 # somewhere other than /root/crowbar-openstack)
@@ -138,7 +140,7 @@ function Fpatch()
 
 sync_crowbar()
   {
-  barclamp_install.rb /opt/dell/crowbar_framework/barclamps/ &&
+  barclamp_install.rb $BARCLAMP_FORK_PATH &&
   for barclamp in $BARCLAMPS
     do
     knife cookbook upload -o /opt/dell/chef/cookbooks/ $BARCLAMP_NAME
@@ -164,12 +166,16 @@ thus defined in the following sections. A short explanation of the three:
   in `/opt/dell`.
 
 Using patches against `/opt/dell` may seem a bit over-the-top at first since
-one could simply copy files back and forth, but it prevents breakage in cases
-where `/opt/dell` is out of sync with the `crowbar-openstack` repository's
-master branch or your own fork of `crowbar-openstack` is out of sync with
-upstream: in the former case copying files from your fork to `/opt/dell` may
-cause an inconsistent state and errors entirely unrelated to your change. In
-the latter case copying files from `/opt/dell` to your fork may re-introduce
+one could simply copy files back and forth or use `barclamp_install` on your
+checkout, but it prevents a lot of breakage in cases where `/opt/dell` is out
+of sync with the `crowbar-openstack` repository's master branch or your own
+fork of `crowbar-openstack` is out of sync with upstream.
+
+In the former case copying files from your fork to `/opt/dell` or using
+`barclapm_install` may cause an inconsistent state and errors entirely
+unrelated to your change.
+
+In the latter case copying files from `/opt/dell` to your fork may re-introduce
 old code that is no longer present upstream. Both should not be an issue for
 new barclamps, but it is better to get used to the `patch(1)` based workflow
 right away since these problems do become a problem when changing an existing
