@@ -140,10 +140,10 @@ function Fpatch()
 
 sync_crowbar()
   {
-  barclamp_install.rb $BARCLAMP_FORK_PATH &&
+  barclamp_install.rb /opt/dell/crowbar_framework/barclamps &&
   for barclamp in $BARCLAMPS
     do
-    knife cookbook upload -o /opt/dell/chef/cookbooks/ $BARCLAMP_NAME
+    knife cookbook upload -o /opt/dell/chef/cookbooks/ $barclamp
     done
   systemctl restart crowbar
   }
