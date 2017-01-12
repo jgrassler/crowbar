@@ -41,6 +41,11 @@ We will assume some things to already be present. Namely, the following:
   SUSE OpenStack Cloud this would be a controller and one compute node at a
   minimum.
 
+* You will need to install the following packages:
+
+  * `patch`
+  * `git-core`
+
 Providing these is out of scope for this document. We assume you are able to
 fork the appropriate Barclamp collection. The machines can be provided through
 manual installation or by using an automated setup tool such as
@@ -172,7 +177,7 @@ of sync with the `crowbar-openstack` repository's master branch or your own
 fork of `crowbar-openstack` is out of sync with upstream.
 
 In the former case copying files from your fork to `/opt/dell` or using
-`barclapm_install` may cause an inconsistent state and errors entirely
+`barclamp_install` may cause an inconsistent state and errors entirely
 unrelated to your change.
 
 In the latter case copying files from `/opt/dell` to your fork may re-introduce
