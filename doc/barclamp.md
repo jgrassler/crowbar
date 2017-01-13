@@ -108,7 +108,20 @@ C_NAME="Crowbar Committer"
 # commit messages.
 C_EMAIL="email@address.invalid"
 
-# Replace "6cefbd80254141a63f4c86df195cd930ac7eb10b" by your first commit's ID.
+# Replace "6cefbd80254141a63f4c86df195cd930ac7eb10b" by the ID of the oldest
+# commit on your branch. Running
+#
+#   git log --format='%H %s' $branch..HEAD
+#
+# where $branch is the upstream branch you are developing against such as
+# `master` or `stable/3.0`, should give you a list of original commits. This
+# assumes $branch has not been improperly cherry-picked into or rebased in your
+# fork, though. It also assumes that you are not working on your fork's
+# `master` branch (you shouldn't, but people have been known to do this
+# anyway). Since all of these may occasionally happen, this guide leaves it up
+# to the user to set $COMMIT as they see fit rather than trying to determine
+# its value automatically through the command mentioned above.
+
 export COMMIT="6cefbd80254141a63f4c86df195cd930ac7eb10b"
 
 # Insert your own barclamp's name here:
