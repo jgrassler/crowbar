@@ -133,7 +133,8 @@ export BARCLAMP_NAME=mybarclamp
 export BARCLAMPS="$BARCLAMP_NAME"
 
 # Insert the path to your barclamp collection checkout here (in case it's
-# somewhere other than /root/crowbar-openstack)
+# somewhere other than /root/crowbar-openstack). This directory must be a git
+# working copy of the crowbar-openstack fork and branch you are working on.
 
 export BARCLAMP_FORK_PATH=/root/crowbar-openstack
 
@@ -142,20 +143,47 @@ export GIT_AUTHOR_EMAIL="$C_EMAIL"
 export GIT_COMMITTER_NAME="$C_NAME"
 export GIT_COMMITTER_EMAIL="$C_EMAIL"
 
-alias Cpatch="(cd $BARCLAMP_FORK_PATH; git show | patch -N -p1 --merge -d /opt/dell)"
-
-# Full patch: applies your fork completely against /opt/crowbar
-function Fpatch()
+# Applies all the committed changes in your crowbar-openstack working copy to
+# /opt/dell and updates Crowbar runtime state. Note: this will break if you
+# rebase your working copy, so do not rebase your working copy. If you rebase
+# it (e.g. for final testing before a merge, please build a fresh Crowbar node
+# or restore it from a snapshot).
+function reposync_crowbar()
   {
-  cd $BARCLAMP_FORK_PATH
-  git diff "$COMMIT^" HEAD | patch -N --merge -p1 -d /opt/dell
-  for f in /opt/dell/*.yml
+  if [ -e /opt/dell/patchlevel ]; then
+    . /opt/dell/patchlevel
+    head=$(cd $BARCLAMP_FORK_PATH; git log --format='%H'| head -n 1)
+    if [ "$head" = "$commit" ]; then
+      echo "/opt/dell is already up to date. If this is not what you " 1>&2
+      echo "expected to see, you may have uncommitted changes" 1>&2
+      echo "in ${BARCLAMP_FORK_PATH}." 1>&2
+      return
+    fi
+  else
+    commit="${COMMIT}^"
+  fi
+
+  pushd $BARCLAMP_FORK_PATH > /dev/null
+  cp -a /opt/dell /opt/dell.orig
+  git diff $commit HEAD | patch -N --merge -p1 -d /opt/dell || return
+  rm -rf /opt/dell.orig
+  # Record current HEAD as patchlevel
+  echo "commit=$(git log --format='%H'| head -n 1)" > /opt/dell/patchlevel
+  popd > /dev/null
+
+  for barclamp in $BARCLAMPS
     do
-    ln -s $f /opt/dell/crowbar_framework/barclamps 2>&1 > /dev/null
+    if [ ! -h /opt/dell/crowbar_framework/barclamps/${barclamp}.yml ]; then
+      ln -s /opt/dell/${barclamp}.yml /opt/dell/crowbar_framework/barclamps 2>&1 > /dev/null
+    fi
     done
   chmod 755 /opt/dell/bin/*
+
+  sync_crowbar
   }
 
+# Helper function: updates Crowbar's runtime state after /opt/dell
+# has been modified.
 sync_crowbar()
   {
   barclamp_install.rb /opt/dell/crowbar_framework/barclamps &&
@@ -165,23 +193,21 @@ sync_crowbar()
     done
   systemctl restart crowbar
   }
+
 ```
 
-We will make heavy use of the `Cpatch`, `Fpatch` and `sync_crowbar` commands
-thus defined in the following sections. A short explanation of the three:
+We will make heavy use of the `reposync_crowbar` command thus defined in the
+following sections. A short explanation of the three:
 
-* `Fpatch` will apply your whole fork against `/opt/dell` using `patch(1)`. You
-  use this command to apply the current state of your fork to a freshly
-  installed Crowbar node. This command may cause merge conflicts. If this
-  happens, resolve them before doing anything else.
-
-* `Cpatch` will apply the latest commit in `/root/crowbar-openstack` to
-  `/opt/dell` (use this after each new commit). This command may cause merge
-  conflicts. If this happens, resolve them before doing anything else.
-
-* `sync_crowbar` will make any updated state in `/opt/dell` appear in the
-  running Crowbar instance. Run this after every change, no matter how minor,
-  in `/opt/dell`.
+`reposync_crowbar` will apply your whole fork against `/opt/dell` using
+`patch(1)` and sync Crowbar's runtime state with what is now in /opt/dell. You
+use this command to apply the current state of your fork to a freshly installed
+Crowbar node. This command may cause merge conflicts which you will have to
+resolve before proceeding. They usually happen due to a very out of date topic
+branch. While you can resolve them in /opt/dell you are better off rebasing
+your `crowbar-openstack` fork against upstream and applying the result to a
+fresh Crowbar node. Also, you will find a backup copy of /opt/dell in
+/opt/dell.orig if a merge conflict does occur.
 
 Using patches against `/opt/dell` may seem a bit over-the-top at first since
 one could simply copy files back and forth or use `barclamp_install` on your
@@ -994,12 +1020,7 @@ code](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49
 
 *Note: Whenever you make changes during this phase, make them to the
 `crowbar-openstack` git checkout in `/root/crowbar-openstack`, commit them, and
-then run the following commands afterwards to make them known to Crowbar:*
-
-```
-Cpatch
-sync_crowbar
-```
+then run `reposync_crowbar` to make them known to Crowbar.
 
 In the previous sections you created a scaffold for your barclamp, possibly
 with some pieces of implementation as well. Before you create a pull request
@@ -1028,8 +1049,7 @@ commands from the [Preparations for Crowbar Node](#preparations-for-crowbar-node
 section:
 
 ```
-Fpatch   # Fix any merge conflicts reported by this command before proceeding
-sync_crowbar
+reposync_crowbar   # Fix any merge conflicts reported by this command before proceeding
 ```
 
 If you navigate to your Crowbar Admin Node's web interface now and select
