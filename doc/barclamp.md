@@ -50,6 +50,15 @@ Providing these is out of scope for this document. We assume you are able to
 fork the appropriate Barclamp collection. The machines can be provided through
 manual installation or by using an automated setup tool such as
 [mkcloud](https://github.com/SUSE-Cloud/automation/blob/master/scripts/mkcloud).
+Depending on the individual situation you can use either the `plain` or the
+`installonly` `mkcloud` step. The former will install the nodes and deploy the
+standard set of barclamps in their default configuration, while the latter will
+only install the nodes. Use `plain` if your barclamp does not need to be
+deployed before other barclamps and if you do not modify other barclamps.
+Otherwise use `installonly` and deploy barclamps bit by bit through the Crowbar
+web UI or the Crowbar CLI client. This will give you the opportunity to add
+package repositories or tweak barclamps' proposal settings where needed along
+the way.
 
 Optionally (but strongly recommended) you can also
 
@@ -224,6 +233,56 @@ old code that is no longer present upstream. Both should not be an issue for
 new barclamps, but it is better to get used to the `patch(1)` based workflow
 right away since these problems do become a problem when changing an existing
 barclamp later and thus the `patch(1)` based workflow becomes neccessary.
+
+## Packages
+
+If you create a new barclamp this is typically to deploy an OpenStack service
+that does not exist on SUSE OpenStack Cloud, yet. While important, your
+barclamp is only half of what is needed. The other half is creating the
+packages your Barclamp will install the new OpenStack service from.
+
+Ideally, you have already created these packages in [Open Build
+Service](https://build.opensuse.org) and have taken the appropriate steps to
+get them into the repository `mkcloud` uses for deployment (since `mkcloud`
+uses SUSE internal repositories or a local copy of these internal repositories,
+there is no point in detailing these steps in this public guide). In this case
+you are all set, and your chef recipes will merrily install the packages they
+need from official sources. If this isn't the case for you there are still some
+strategies for getting your packages installed:
+
+First of all, you will need a package repository to store your non-official
+packages in. The easiest way to accomplish this is to register an account on
+[Open Build Service](https://build.opensuse.org) and create a project with all
+the packages you need under your home project. We'll assume you have this a
+non-official package repository (or multiple repositories) with all the
+packages you need in place for the remainder of this section.
+
+If all you do is adding new packages, you should be fine with simply adding
+your repository using `zypper ar` on every node you are installing your
+packages to:
+
+```
+zypper ar -f http://download.opensuse.org/repositories/home:/<your OBS user>:/<your project name>/SLE_12_SP2 myrepo
+```
+
+If you need to override existing packages with newer versions (for instance, if
+the service your barclamp deploys requires a newer python-openstackclient
+version you ship in your own repository), you may also need to disable vendor
+locking for Zypper. To do this, set the following in `/etc/zypper/zypp.conf`:
+
+```
+solver.allowVendorChange = true
+
+```
+
+You need to do this because normally Zypper would prefer packages from official
+repositories, even if your own repository contains newer version. If you set
+this option the newer package from your repository will trump the one from
+the official one.
+
+Both steps must be performed on all relevant nodes _before_ you apply your
+barclamp, otherwise applying it will fail due to Crowbar being unable to locate
+your packages.
 
 ## Barclamp Component Overview
 
