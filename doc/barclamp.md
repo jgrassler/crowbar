@@ -617,9 +617,8 @@ should now look something like this:
       "" : {
 ```
 
-The corresponding section of the Barbican default data bag begins
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L1) and ends
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L29).
+The corresponding section of the Barbican default data bag is 
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L1:L29) 
 
 With these preliminaries out of the way you can now add all the parameters you
 need under `attributes[""]` and remove existing parameters left over
@@ -667,9 +666,8 @@ When you are done `attributes[""]` should look something like this:
      }
 ```
 
-The corresponding section of the Barbican default data bag begins
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L5) and ends
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L29).
+The corresponding section of the Barbican default data bag is 
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L5:L29) 
 
 Once you have added your parameters you will need to adjust
 `deployment[""]`. This section provides meta data about your chef
@@ -738,9 +736,8 @@ When you are done `deployment[""]` should look something like this
   }
 ```
 
-The corresponding section of the Barbican default data bag begins
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L31) and ends
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L53).
+The corresponding section of the Barbican default data bag is
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.json#L31:L53)
 
 ##### Data bag schema
 
@@ -799,9 +796,8 @@ care of, leaving us with a top-level section that should look something like thi
         "": {
 ```
 
-The corresponding section from the Barbican data bag schema begins
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L1) and ends
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L11).
+The corresponding section from the Barbican data bag schema is
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/chef/data_bags/crowbar/template-barbican.schema#L1:L11)
 
 Next, we will need to adjust the constraints for `attributes[""]`. The Crowbar
 web UI is a Ruby on Rails application with a MVC (Model-View-Controller)
@@ -950,9 +946,8 @@ class MybarclampService < PacemakerServiceObject
   end
 ```
 
-The corresponding lines from the Barbican barclamp's controller begin
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L17) and end
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L21).
+The corresponding lines from the Barbican barclamp's controller are
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L17:L21)
 
 The next thing we need to change is the `role_constraints` method. This method
 tells Crowbar on how many nodes the service can be deployed, what types of node
@@ -987,9 +982,8 @@ commented example:
       end
     end
 ```
-The corresponding lines from the Barbican barclamp's controller begin
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L29) and end
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L43).
+The corresponding lines from the Barbican barclamp's controller are
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L29:L43)
 
 Depending on your barclamp's dependencies you may need to adjust the list of
 dependencies returned by the `proposal_dependencies()` method. Since `mybarclamp`
@@ -1046,10 +1040,8 @@ After adaption our method might look something like this:
   end
 ```
 
-The Barbican barclamp's `create_proposal` method starts
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L57) 
-and ends
-[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L57).
+The Barbican barclamp's `create_proposal` method is
+[here](https://github.com/crowbar/crowbar-openstack/blob/8bebf8a379ebea8ef462ad49746dda6d36a3c46d/crowbar_framework/app/models/barbican_service.rb#L57:L81) 
 
 ##### Minimal Controller Class
 
